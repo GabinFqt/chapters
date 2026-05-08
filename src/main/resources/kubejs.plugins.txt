@@ -1,0 +1,1 @@
+com.gabinx.stagecraft.compat.kubejs.StagecraftKubeJSPlugin

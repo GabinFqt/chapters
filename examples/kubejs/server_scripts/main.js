@@ -1,0 +1,13 @@
+console.info('[stagecraft] examples/kubejs/server_scripts/main.js loaded')
+
+ServerEvents.loaded(event => {
+  StagecraftEvents.defineStage(
+    'stagecraft:script_pickups',
+    'minecraft:diamond',
+    'minecraft:emerald',
+    'minecraft:golden_apple',
+    'minecraft:gold_ingot',
+    'minecraft:apple',
+  )
+  StagecraftEvents.defineStage('stagecraft:script_vanilla_all', '@minecraft')
+})

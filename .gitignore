@@ -1,0 +1,21 @@
+# Gradle
+.gradle/
+build/
+bin/
+out/
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# Minecraft / NeoForge dev environment
+run/
+
+# Accidentally vendored sources (do not commit)
+net/
+
+# OS / misc
+.DS_Store
+*.class
+*.log

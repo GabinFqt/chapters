@@ -1,0 +1,233 @@
+package com.gabinx.stagecraft.stage;
+
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.tags.TagKey;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.material.FlowingFluid;
+import net.minecraft.world.level.material.Fluid;
+import net.neoforged.neoforge.fluids.FluidStack;
+
+import java.util.LinkedHashSet;
+import java.util.Objects;
+import java.util.Set;
+
+public record StageDefinition(
+        ResourceLocation id,
+        Set<ResourceLocation> items,
+        Set<TagKey<Item>> tags,
+        Set<String> namespaces,
+        Set<ResourceLocation> fluids,
+        Set<TagKey<Fluid>> fluidTags,
+        Set<String> fluidNamespaces) {
+
+    public static StageDefinition fromJson(ResourceLocation id, JsonObject json) {
+        Set<ResourceLocation> items = new LinkedHashSet<>();
+        Set<TagKey<Item>> tags = new LinkedHashSet<>();
+        Set<String> namespaces = new LinkedHashSet<>();
+        Set<ResourceLocation> fluids = new LinkedHashSet<>();
+        Set<TagKey<Fluid>> fluidTags = new LinkedHashSet<>();
+        Set<String> fluidNamespaces = new LinkedHashSet<>();
+
+        JsonArray namespacesJson = json.getAsJsonArray("namespaces");
+        if (namespacesJson != null) {
+            for (JsonElement element : namespacesJson) {
+                if (!element.isJsonPrimitive()) {
+                    continue;
+                }
+                String n = element.getAsString();
+                addNamespace(namespaces, n);
+                addFluidNamespace(fluidNamespaces, n);
+            }
+        }
+
+        JsonArray fluidNamespacesJson = json.getAsJsonArray("fluid_namespaces");
+        if (fluidNamespacesJson != null) {
+            for (JsonElement element : fluidNamespacesJson) {
+                if (!element.isJsonPrimitive()) {
+                    continue;
+                }
+                addFluidNamespace(fluidNamespaces, element.getAsString());
+            }
+        }
+
+        JsonArray values = json.getAsJsonArray("items");
+        if (values != null) {
+            for (JsonElement element : values) {
+                if (!element.isJsonPrimitive()) {
+                    continue;
+                }
+                String itemEntry = element.getAsString();
+                accumulateEntry(itemEntry, items, tags, namespaces);
+                if (itemEntry != null && itemEntry.trim().startsWith("@")) {
+                    accumulateFluidEntry(itemEntry.trim(), fluids, fluidTags, fluidNamespaces);
+                }
+            }
+        }
+
+        JsonArray fluidValues = json.getAsJsonArray("fluids");
+        if (fluidValues != null) {
+            for (JsonElement element : fluidValues) {
+                if (!element.isJsonPrimitive()) {
+                    continue;
+                }
+                accumulateFluidEntry(element.getAsString(), fluids, fluidTags, fluidNamespaces);
+            }
+        }
+
+        return new StageDefinition(id, items, tags, namespaces, fluids, fluidTags, fluidNamespaces);
+    }
+
+    /**
+     * One stage-list entry from a datapack or KubeJS: item id (namespaced path), {@code #item_tag}, or
+     * {@code @mod_id} meaning every item registered under that namespace.
+     */
+    public static void accumulateEntry(
+            String raw,
+            Set<ResourceLocation> itemsOut,
+            Set<TagKey<Item>> tagsOut,
+            Set<String> namespacesOut) {
+        if (raw == null) {
+            return;
+        }
+        String trimmed = raw.trim();
+        if (trimmed.isEmpty()) {
+            return;
+        }
+        if (trimmed.startsWith("#")) {
+            ResourceLocation tagId = ResourceLocation.tryParse(trimmed.substring(1).trim());
+            if (tagId != null) {
+                tagsOut.add(TagKey.create(BuiltInRegistries.ITEM.key(), tagId));
+            }
+            return;
+        }
+        if (trimmed.startsWith("@")) {
+            addNamespace(namespacesOut, trimmed.substring(1));
+            return;
+        }
+        ResourceLocation itemId = ResourceLocation.tryParse(trimmed);
+        if (itemId != null) {
+            itemsOut.add(itemId);
+        }
+    }
+
+    /**
+     * {@code namespaces} datapack column (and optional {@code @} prefix); same validation as Vanilla mod ids.
+     */
+    static void addNamespace(Set<String> namespacesOut, String raw) {
+        if (raw == null) {
+            return;
+        }
+        String s = raw.trim();
+        if (s.startsWith("@")) {
+            s = s.substring(1).trim();
+        }
+        if (s.isEmpty()) {
+            return;
+        }
+        try {
+            ResourceLocation.fromNamespaceAndPath(s, "x");
+            namespacesOut.add(s);
+        } catch (IllegalArgumentException ignored) {
+        }
+    }
+
+    static void addFluidNamespace(Set<String> namespacesOut, String raw) {
+        addNamespace(namespacesOut, raw);
+    }
+
+    /**
+     * One stage-list fluid entry from a datapack or KubeJS: fluid id, {@code #fluid_tag}, or {@code @} mod namespace for
+     * every fluid registered under that namespace.
+     */
+    public static void accumulateFluidEntry(
+            String raw,
+            Set<ResourceLocation> fluidsOut,
+            Set<TagKey<Fluid>> fluidTagsOut,
+            Set<String> fluidNamespacesOut) {
+        if (raw == null) {
+            return;
+        }
+        String trimmed = raw.trim();
+        if (trimmed.isEmpty()) {
+            return;
+        }
+        if (trimmed.startsWith("#")) {
+            ResourceLocation tagId = ResourceLocation.tryParse(trimmed.substring(1).trim());
+            if (tagId != null) {
+                fluidTagsOut.add(TagKey.create(BuiltInRegistries.FLUID.key(), tagId));
+            }
+            return;
+        }
+        if (trimmed.startsWith("@")) {
+            addFluidNamespace(fluidNamespacesOut, trimmed.substring(1));
+            return;
+        }
+        ResourceLocation fluidId = ResourceLocation.tryParse(trimmed);
+        if (fluidId != null) {
+            fluidsOut.add(fluidId);
+        }
+    }
+
+    public boolean matches(ItemStack stack) {
+        ResourceLocation key = BuiltInRegistries.ITEM.getKey(stack.getItem());
+        if (items.contains(key)) {
+            return true;
+        }
+        if (!namespaces.isEmpty() && namespaces.contains(key.getNamespace())) {
+            return true;
+        }
+        for (TagKey<Item> tag : tags) {
+            if (stack.is(tag)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Still and flowing variants ({@code minecraft:water} vs {@code minecraft:flowing_water}, NeoForge
+     * {@code minecraft:milk} vs {@code minecraft:flowing_milk}) share one logical fluid for stages; match on the
+     * source fluid id like filled buckets do.
+     */
+    public static ResourceLocation fluidKindRegistryKey(Fluid fluid) {
+        if (fluid instanceof FlowingFluid flowing) {
+            return BuiltInRegistries.FLUID.getKey(flowing.getSource());
+        }
+        return BuiltInRegistries.FLUID.getKey(fluid);
+    }
+
+    public boolean matchesFluid(FluidStack stack) {
+        if (stack == null || stack.isEmpty()) {
+            return false;
+        }
+
+        ResourceLocation kindKey = fluidKindRegistryKey(stack.getFluid());
+        if (kindKey != null && fluids.contains(kindKey)) {
+            return true;
+        }
+        if (kindKey != null && !fluidNamespaces.isEmpty() && fluidNamespaces.contains(kindKey.getNamespace())) {
+            return true;
+        }
+        for (TagKey<Fluid> tag : fluidTags) {
+            if (stack.is(tag)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public StageDefinition {
+        Objects.requireNonNull(id, "id");
+        items = Set.copyOf(items);
+        tags = Set.copyOf(tags);
+        namespaces = Set.copyOf(namespaces);
+        fluids = Set.copyOf(fluids);
+        fluidTags = Set.copyOf(fluidTags);
+        fluidNamespaces = Set.copyOf(fluidNamespaces);
+    }
+}

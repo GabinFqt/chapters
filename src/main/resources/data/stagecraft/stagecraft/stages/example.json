@@ -1,0 +1,10 @@
+{
+  "items": [
+    "minecraft:netherite_ingot",
+    "#minecraft:swords",
+    "minecraft:enchanted_book"
+  ],
+  "fluids": [
+    "minecraft:lava"
+  ]
+}

@@ -29,6 +29,7 @@ All require permission level as usual for multiplayer.
 | [[Stages-datapack]] | Where to put JSON, keys, `#` tags, `@mods` |
 | [[KubeJS]] | `defineStage`, `fluid:`, `recipe:`, `PlayerStages` |
 | [[Examples]] | Copy-paste setups (tiers, fluids, recipes, Mekanism) |
+| [[FTB-integration]] | FTB Library / FTB Teams / FTB Quests (Stage Reward, team-wide unlocks) |
 | [[JEI-and-limitations]] | What JEI hides and what crafting is blocked |
 | [[Troubleshooting]] | datapack not applying, conflicting stages, JEI quirks |
 

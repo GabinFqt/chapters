@@ -1,6 +1,6 @@
 package com.gabinx.chapters.stage;
 
-import com.gabinx.chapters.ChaptersRegistries;
+import com.gabinx.chapters.compat.ftb.EffectiveStages;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
@@ -15,8 +15,7 @@ public final class LockResolver {
             return false;
         }
 
-        PlayerStages stages = player.getData(ChaptersRegistries.PLAYER_STAGES.get());
-        return StageManager.get().isItemLocked(stages, stack);
+        return StageManager.get().isItemLocked(EffectiveStages.snapshot(player), stack);
     }
 
     public static boolean isFluidLocked(ServerPlayer player, FluidStack stack) {
@@ -24,8 +23,7 @@ public final class LockResolver {
             return false;
         }
 
-        PlayerStages stages = player.getData(ChaptersRegistries.PLAYER_STAGES.get());
-        return StageManager.get().isFluidLocked(stages, stack);
+        return StageManager.get().isFluidLocked(EffectiveStages.snapshot(player), stack);
     }
 
     /**
@@ -36,8 +34,7 @@ public final class LockResolver {
             return false;
         }
 
-        PlayerStages stages = player.getData(ChaptersRegistries.PLAYER_STAGES.get());
-        return StageManager.get().isChemicalLocked(stages, chemicalRegistryKey);
+        return StageManager.get().isChemicalLocked(EffectiveStages.snapshot(player), chemicalRegistryKey);
     }
 
     public static boolean isRecipeLocked(ServerPlayer player, ResourceLocation recipeHolderId) {
@@ -45,7 +42,6 @@ public final class LockResolver {
             return false;
         }
 
-        PlayerStages stages = player.getData(ChaptersRegistries.PLAYER_STAGES.get());
-        return StageManager.get().isRecipeLocked(stages, recipeHolderId);
+        return StageManager.get().isRecipeLocked(EffectiveStages.snapshot(player), recipeHolderId);
     }
 }

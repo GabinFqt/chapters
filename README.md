@@ -113,6 +113,25 @@ ServerEvents.commandRegistry(event => {
 
 Chapters integrates optionally with **JEI**: when client stage payloads arrive, locked item / fluid / Mekanism chemical ids and locked **recipe ids** are recomputed: ingredients are hidden, output-focused recipes are hidden where applicable (Mekanism chemicals use `TYPE_CHEMICAL` when both mods are present), and recipes matching a locked id are hidden across JEI recipe types, with unlock reconciliation via `includeHidden()` on focus lookups.
 
+## FTB Library / FTB Teams / FTB Quests
+
+When **FTB Library** is installed, Chapters registers itself as the active stage provider via `StageHelper`. As a result:
+
+- FTB Quests' built-in **Stage Reward** grants a chapter id to the player on claim — no extra setup required, this is the default way to make a chapter the reward of a quest.
+- FTB Quests' built-in **Stage Task** checks for a chapter id.
+- The **"Stage Required"** field on quests / chapters in FTB Quests gates progression on a chapter id.
+
+When **FTB Teams** is also installed, every chapter unlock is **team-scoped** — stored on the player's current team via the built-in `TEAM_STAGES` property. That means:
+
+- All members of a `PartyTeam` instantly share unlocks; the inventory auditor and JEI hide/reveal run for every online member as soon as one of them claims a Stage Reward (or any other code path adds a stage).
+- A solo player keeps unlocks on their personal team (a `PlayerTeam`).
+- When a player **joins** a party they adopt the party's stages; their previous personal-team unlocks are not carried over.
+- The very first time a player logs in after FTB Teams is added on top of an existing world, any pre-existing per-player unlocks on their personal team are migrated upward (party teams are skipped to avoid leaking personal stages).
+
+The integration is fully transparent for `/chapters add/remove`, `PlayerStages.of(player)` from KubeJS, and any other call site — they all route through the same team-aware path. No config flags, no commands to enable. If FTB Teams is absent the existing per-player attachment is used unchanged.
+
+For more advanced reward flows (e.g. granting a chapter conditionally), pair FTB Quests' **Custom Reward** with KubeJS — see [`examples/kubejs/server_scripts/ftbquests_chapter_reward.js`](examples/kubejs/server_scripts/ftbquests_chapter_reward.js).
+
 ## Development
 
 Requirements:

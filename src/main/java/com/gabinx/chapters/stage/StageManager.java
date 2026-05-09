@@ -167,7 +167,7 @@ public final class StageManager extends SimpleJsonResourceReloadListener {
         fluidStagesIndex = Map.copyOf(fluidMap);
         chemicalStagesIndex = rebuildChemicalStagesIndex(mergedDefinitions);
         recipeStagesIndex = Map.copyOf(recipeMap);
-        ChaptersAPI.broadcastRecipeStageIndex();
+        ChaptersAPI.broadcastStageIndices();
     }
 
     @SuppressWarnings("unchecked")

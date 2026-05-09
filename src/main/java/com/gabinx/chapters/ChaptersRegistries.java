@@ -1,7 +1,7 @@
 package com.gabinx.chapters;
 
-import com.gabinx.chapters.network.ClientboundRecipeStageIndexPayload;
 import com.gabinx.chapters.network.ClientboundStageDeltaPayload;
+import com.gabinx.chapters.network.ClientboundStageIndicesPayload;
 import com.gabinx.chapters.network.ClientboundStagesPayload;
 import com.gabinx.chapters.stage.PlayerStages;
 import net.neoforged.bus.api.IEventBus;
@@ -34,13 +34,13 @@ public final class ChaptersRegistries {
     }
 
     private static void registerPayloads(RegisterPayloadHandlersEvent event) {
-        PayloadRegistrar registrar = event.registrar("1");
+        PayloadRegistrar registrar = event.registrar("2");
         registrar.playToClient(ClientboundStagesPayload.TYPE, ClientboundStagesPayload.STREAM_CODEC, ClientboundStagesPayload::handle);
         registrar.playToClient(ClientboundStageDeltaPayload.TYPE, ClientboundStageDeltaPayload.STREAM_CODEC, ClientboundStageDeltaPayload::handle);
         registrar.playToClient(
-                ClientboundRecipeStageIndexPayload.TYPE,
-                ClientboundRecipeStageIndexPayload.STREAM_CODEC,
-                ClientboundRecipeStageIndexPayload::handle
+                ClientboundStageIndicesPayload.TYPE,
+                ClientboundStageIndicesPayload.STREAM_CODEC,
+                ClientboundStageIndicesPayload::handle
         );
     }
 }

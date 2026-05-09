@@ -45,5 +45,26 @@ versionRange="[10.7.19,)"
 ordering="NONE"
 side="BOTH"
 
+[[dependencies.${mod_id}]]
+modId="ftblibrary"
+type="optional"
+versionRange="[2101.1.0,)"
+ordering="BEFORE"
+side="BOTH"
+
+[[dependencies.${mod_id}]]
+modId="ftbteams"
+type="optional"
+versionRange="[2101.1.0,)"
+ordering="BEFORE"
+side="BOTH"
+
+[[dependencies.${mod_id}]]
+modId="ftbquests"
+type="optional"
+versionRange="[2101.1.0,)"
+ordering="NONE"
+side="BOTH"
+
 [[mixins]]
 config="${mod_id}.mixins.json"

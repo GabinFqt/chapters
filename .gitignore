@@ -11,6 +11,22 @@ out/
 
 # Minecraft / NeoForge dev environment
 run/
+run-bob/
+
+# Shared KubeJS dev folder (canonical source for run/kubejs and run-bob/kubejs symlinks).
+# We track the scripts you actually edit and ignore everything KubeJS regenerates on boot.
+kubejs/README.txt
+kubejs/assets/
+kubejs/config/
+kubejs/data/
+kubejs/.cache/
+kubejs/exported/
+
+# Local-only helper scripts (kept on disk, not tracked).
+scripts/
+
+# Local-only manual test plans / dev notes (kept on disk, not tracked).
+testing/
 
 # Accidentally vendored sources (do not commit)
 net/

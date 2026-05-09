@@ -2,9 +2,8 @@ package com.gabinx.chapters.compat;
 
 import com.gabinx.chapters.Chapters;
 import com.gabinx.chapters.compat.jei.ChaptersJeiPlugin;
-import com.gabinx.chapters.stage.ClientRecipeStagesIndex;
 import com.gabinx.chapters.stage.ClientStageCache;
-import com.gabinx.chapters.stage.StageManager;
+import com.gabinx.chapters.stage.ClientStageIndices;
 import net.minecraft.resources.ResourceLocation;
 import net.neoforged.fml.ModList;
 
@@ -38,78 +37,26 @@ public final class RecipeViewerCompat {
      * stage among every definition that mentions the stack).
      */
     private static Set<ResourceLocation> getLockedItemIds() {
-        Set<ResourceLocation> activeStages = ClientStageCache.snapshot();
-        Set<ResourceLocation> locked = new LinkedHashSet<>();
-
-        Map<ResourceLocation, Set<ResourceLocation>> index = StageManager.get().itemStagesIndexView();
-        for (Map.Entry<ResourceLocation, Set<ResourceLocation>> entry : index.entrySet()) {
-            ResourceLocation itemId = entry.getKey();
-            Set<ResourceLocation> definingStages = entry.getValue();
-            boolean unlocked = false;
-            for (ResourceLocation required : definingStages) {
-                if (activeStages.contains(required)) {
-                    unlocked = true;
-                    break;
-                }
-            }
-            if (!unlocked) {
-                locked.add(itemId);
-            }
-        }
-        return locked;
+        return computeLocked(ClientStageIndices.itemsView());
     }
 
     private static Set<ResourceLocation> getLockedFluidIds() {
-        Set<ResourceLocation> activeStages = ClientStageCache.snapshot();
-        Set<ResourceLocation> locked = new LinkedHashSet<>();
-
-        Map<ResourceLocation, Set<ResourceLocation>> index = StageManager.get().fluidStagesIndexView();
-        for (Map.Entry<ResourceLocation, Set<ResourceLocation>> entry : index.entrySet()) {
-            ResourceLocation fluidId = entry.getKey();
-            Set<ResourceLocation> definingStages = entry.getValue();
-            boolean unlocked = false;
-            for (ResourceLocation required : definingStages) {
-                if (activeStages.contains(required)) {
-                    unlocked = true;
-                    break;
-                }
-            }
-            if (!unlocked) {
-                locked.add(fluidId);
-            }
-        }
-        return locked;
+        return computeLocked(ClientStageIndices.fluidsView());
     }
 
     private static Set<ResourceLocation> getLockedChemicalIds() {
-        Set<ResourceLocation> activeStages = ClientStageCache.snapshot();
-        Set<ResourceLocation> locked = new LinkedHashSet<>();
-
-        Map<ResourceLocation, Set<ResourceLocation>> index = StageManager.get().chemicalStagesIndexView();
-        for (Map.Entry<ResourceLocation, Set<ResourceLocation>> entry : index.entrySet()) {
-            ResourceLocation chemicalId = entry.getKey();
-            Set<ResourceLocation> definingStages = entry.getValue();
-            boolean unlocked = false;
-            for (ResourceLocation required : definingStages) {
-                if (activeStages.contains(required)) {
-                    unlocked = true;
-                    break;
-                }
-            }
-            if (!unlocked) {
-                locked.add(chemicalId);
-            }
-        }
-        return locked;
+        return computeLocked(ClientStageIndices.chemicalsView());
     }
 
     private static Set<ResourceLocation> getLockedRecipeIds() {
+        return computeLocked(ClientStageIndices.recipesView());
+    }
+
+    private static Set<ResourceLocation> computeLocked(Map<ResourceLocation, Set<ResourceLocation>> index) {
         Set<ResourceLocation> activeStages = ClientStageCache.snapshot();
         Set<ResourceLocation> locked = new LinkedHashSet<>();
-
-        Map<ResourceLocation, Set<ResourceLocation>> index = ClientRecipeStagesIndex.snapshot();
         for (Map.Entry<ResourceLocation, Set<ResourceLocation>> entry : index.entrySet()) {
-            ResourceLocation recipeId = entry.getKey();
+            ResourceLocation id = entry.getKey();
             Set<ResourceLocation> definingStages = entry.getValue();
             boolean unlocked = false;
             for (ResourceLocation required : definingStages) {
@@ -119,7 +66,7 @@ public final class RecipeViewerCompat {
                 }
             }
             if (!unlocked) {
-                locked.add(recipeId);
+                locked.add(id);
             }
         }
         return locked;

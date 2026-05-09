@@ -1,11 +1,10 @@
 package com.gabinx.chapters.api;
 
-import com.gabinx.chapters.ChaptersRegistries;
+import com.gabinx.chapters.compat.ftb.EffectiveStages;
 import com.gabinx.chapters.event.InventoryAuditor;
-import com.gabinx.chapters.network.ClientboundRecipeStageIndexPayload;
 import com.gabinx.chapters.network.ClientboundStageDeltaPayload;
+import com.gabinx.chapters.network.ClientboundStageIndicesPayload;
 import com.gabinx.chapters.network.ClientboundStagesPayload;
-import com.gabinx.chapters.stage.PlayerStages;
 import com.gabinx.chapters.stage.StageDefinition;
 import com.gabinx.chapters.stage.StageManager;
 import net.minecraft.resources.ResourceLocation;
@@ -21,20 +20,16 @@ public final class ChaptersAPI {
     }
 
     public static boolean addStage(ServerPlayer player, ResourceLocation stageId) {
-        PlayerStages stages = player.getData(ChaptersRegistries.PLAYER_STAGES.get());
-        boolean changed = stages.add(stageId);
-        if (changed) {
-            player.setData(ChaptersRegistries.PLAYER_STAGES.get(), stages);
+        boolean changed = EffectiveStages.add(player, stageId);
+        if (changed && EffectiveStages.shouldEmitPerPlayerDelta(player)) {
             PacketDistributor.sendToPlayer(player, new ClientboundStageDeltaPayload(stageId, true));
         }
         return changed;
     }
 
     public static boolean removeStage(ServerPlayer player, ResourceLocation stageId) {
-        PlayerStages stages = player.getData(ChaptersRegistries.PLAYER_STAGES.get());
-        boolean changed = stages.remove(stageId);
-        if (changed) {
-            player.setData(ChaptersRegistries.PLAYER_STAGES.get(), stages);
+        boolean changed = EffectiveStages.remove(player, stageId);
+        if (changed && EffectiveStages.shouldEmitPerPlayerDelta(player)) {
             PacketDistributor.sendToPlayer(player, new ClientboundStageDeltaPayload(stageId, false));
             InventoryAuditor.auditNow(player);
         }
@@ -42,11 +37,11 @@ public final class ChaptersAPI {
     }
 
     public static boolean hasStage(ServerPlayer player, ResourceLocation stageId) {
-        return player.getData(ChaptersRegistries.PLAYER_STAGES.get()).has(stageId);
+        return EffectiveStages.has(player, stageId);
     }
 
     public static Set<ResourceLocation> getStages(ServerPlayer player) {
-        return player.getData(ChaptersRegistries.PLAYER_STAGES.get()).view();
+        return EffectiveStages.of(player);
     }
 
     public static Optional<StageDefinition> getDefinition(ResourceLocation stageId) {
@@ -55,28 +50,37 @@ public final class ChaptersAPI {
 
     public static void syncAll(ServerPlayer player) {
         PacketDistributor.sendToPlayer(player, new ClientboundStagesPayload(getStages(player)));
-        syncRecipeStageIndexToPlayer(player);
+        syncStageIndicesToPlayer(player);
     }
 
     /**
-     * Sends the server's recipe lock index so JEI can evaluate {@code recipe:…} locks defined only on the server
-     * (e.g. KubeJS {@code defineStage}).
+     * Sends every stage-locking index (items / fluids / chemicals / recipes) so the recipe viewer on a
+     * dedicated-server client can evaluate locks for content defined only on the server (datapack JSON, KubeJS
+     * {@code defineStage}, etc.).
      */
-    public static void syncRecipeStageIndexToPlayer(ServerPlayer player) {
-        PacketDistributor.sendToPlayer(
-                player,
-                new ClientboundRecipeStageIndexPayload(StageManager.get().recipeStagesIndexView()));
+    public static void syncStageIndicesToPlayer(ServerPlayer player) {
+        PacketDistributor.sendToPlayer(player, currentIndicesPayload());
     }
 
     /** Broadcast after stage definition rebuild (datapack reload, KubeJS flush, etc.). */
-    public static void broadcastRecipeStageIndex() {
+    public static void broadcastStageIndices() {
         var server = ServerLifecycleHooks.getCurrentServer();
         if (server == null) {
             return;
         }
-        var payload = new ClientboundRecipeStageIndexPayload(StageManager.get().recipeStagesIndexView());
+        var payload = currentIndicesPayload();
         for (ServerPlayer p : server.getPlayerList().getPlayers()) {
             PacketDistributor.sendToPlayer(p, payload);
         }
+    }
+
+    private static ClientboundStageIndicesPayload currentIndicesPayload() {
+        StageManager mgr = StageManager.get();
+        return new ClientboundStageIndicesPayload(
+                mgr.itemStagesIndexView(),
+                mgr.fluidStagesIndexView(),
+                mgr.chemicalStagesIndexView(),
+                mgr.recipeStagesIndexView()
+        );
     }
 }

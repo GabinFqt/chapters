@@ -3,6 +3,7 @@ package com.gabinx.chapters;
 import com.mojang.logging.LogUtils;
 import com.gabinx.chapters.command.ChaptersCommand;
 import com.gabinx.chapters.compat.RecipeViewerBootstrap;
+import com.gabinx.chapters.compat.ftb.FtbCompat;
 import com.gabinx.chapters.compat.kubejs.ChaptersKubeJSBridge;
 import com.gabinx.chapters.event.CraftingHandler;
 import com.gabinx.chapters.event.InventoryAuditor;
@@ -32,6 +33,8 @@ public final class Chapters {
         NeoForge.EVENT_BUS.addListener(ChaptersKubeJSBridge::onServerTickPost);
         NeoForge.EVENT_BUS.addListener(PlayerJoinHandler::onLogin);
         NeoForge.EVENT_BUS.addListener(PlayerJoinHandler::onRespawn);
+
+        FtbCompat.bootstrap();
 
         RecipeViewerBootstrap.logDetectedRecipeViewers();
     }

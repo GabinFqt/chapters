@@ -134,6 +134,18 @@ Sample KubeJS scripts live under [`examples/kubejs/`](https://github.com/GabinFq
 
 ---
 
+## FTB Library / FTB Teams / FTB Quests
+
+Chapters integrates with the FTB stack out of the box:
+
+- With **FTB Library** present, Chapters becomes the active stage provider (via `StageHelper`). FTB Quests' built-in **Stage Reward** grants a chapter on claim, **Stage Task** checks for a chapter, and the **"Stage Required"** quest/chapter field gates progression on a chapter id — all without any extra registration.
+- With **FTB Teams** also present, every unlock is **team-scoped** through the built-in `TEAM_STAGES` property: all members of a party instantly share chapter unlocks, the inventory auditor and JEI hide/reveal run for every online member, and `/chapters add/remove`, `PlayerStages.of(player)` from KubeJS, and FTB Quests' Stage Reward all converge on the same team-wide storage.
+- When a player joins a party they adopt the party's stages; previous personal-team unlocks are not carried over. Pre-existing attachment data on a player's personal team is migrated upward on first login after FTB Teams is added.
+
+For conditional reward flows, pair FTB Quests' **Custom Reward** with KubeJS — see the sample script in `examples/kubejs/server_scripts/ftbquests_chapter_reward.js` on the GitHub repo.
+
+---
+
 ## Compatibility
 
 | Mod | Status |
@@ -143,6 +155,9 @@ Sample KubeJS scripts live under [`examples/kubejs/`](https://github.com/GabinFq
 | **JEI** | Optional — locked content is hidden client-side when present |
 | **KubeJS** | Optional — bindings registered automatically when present |
 | **Mekanism** | Optional — chemicals can be locked when present; without Mekanism, `chemicals` / `chemical_namespaces` entries are accepted in JSON but build no index |
+| **FTB Library** | Optional — registers Chapters as the FTB stage provider; FTB Quests' Stage Reward / Stage Task / "Stage Required" use chapters automatically |
+| **FTB Teams** | Optional — chapter unlocks are stored on the player's team and shared with every member |
+| **FTB Quests** | Optional — built-in Stage Reward / Task work with chapters; Custom Reward via KubeJS for conditional flows |
 
 Other workstations (smithing tables, machines) are **not** covered by the recipe-blocking mixin yet — those still hide in JEI when locked client-side, but the server-side block currently targets the vanilla crafting grid (`CraftingMenu`).
 

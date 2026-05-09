@@ -1,37 +1,40 @@
 # Chapters
 
-**Chapters** is a progression mod for **NeoForge 1.21.1** inspired by *GameStages* and *ItemStages*. It lets you split your modpack into named "chapters" (a.k.a. stages) and gate **items, fluids, Mekanism chemicals, and recipes** behind them — so players literally cannot interact with locked content until you flip the switch.
-
-It is designed for pack authors who want a **single, well-integrated tool** to drive progression on modern NeoForge, with first-class support for **datapacks**, **KubeJS**, **JEI**, and **Mekanism**.
+This file holds **two paste-ready descriptions**: [Modrinth](#modrinth) (markdown with tables, code, and inline code) and [CurseForge](#curseforge) (markdown with **#** headings, **bold**, *italic*, and lists; still no tables, fenced code, or backticks, which CurseForge handles poorly).
 
 ---
 
-## What you can lock
+## Modrinth
 
-- **Items** — by id, by tag (`#minecraft:swords`), or by entire mod (`@create`).
-- **Fluids** — by id, by tag, or by mod. Buckets, vanilla placement, and NeoForge fluid utility transfers are all checked.
-- **Mekanism chemicals** — gas / infusion / slurry / pigment, by id, tag, or mod. Insertion / extraction is gated on Mekanism's `ChemicalUtils` paths when a server player is in scope.
-- **Recipes** — by recipe id (`minecraft:diamond_pickaxe`, KubeJS `recipe:…`, etc.). Vanilla crafting-grid recipes are blocked server-side until unlocked.
-- **A whole mod at once** — `@modid` in a stage covers items + fluids + chemicals from that namespace in one line.
+**Full documentation (datapacks, KubeJS, FTB, examples): [GitHub Wiki](https://github.com/GabinFqt/chapters/wiki)**
 
-When a player has not unlocked a chapter yet, locked items also get **auto-dropped from their inventory** (every second while online, and whenever a stage is removed or definitions reload). No more "I sneaked the item into a shulker before the wipe".
+**Chapters** is a progression mod for **NeoForge 1.21.1** inspired by *GameStages* and *ItemStages*. It lets you split your modpack into named "chapters" (stages) and gate **items, fluids, Mekanism chemicals, and recipes** behind them, so players cannot interact with locked content until you unlock the stage.
 
----
+It targets pack authors who want **one integrated tool** for progression on modern NeoForge, with first-class support for **datapacks**, **KubeJS**, **JEI**, **Mekanism**, and **FTB** (Library, Teams, Quests).
 
-## Recipe viewer integration (JEI)
+### FTB Library, FTB Teams, and FTB Quests
 
-When **JEI** is installed, Chapters pushes client-side stage updates so JEI can:
+When **FTB Library** is installed, Chapters registers as the FTB **stage provider** (`StageHelper`). **FTB Quests** can then use the built-in **Stage Reward** (grant a chapter on claim), **Stage Task** (require a chapter), and **Stage Required** on quests or chapters, all using your chapter ids with no extra wiring.
 
-- hide locked **ingredients** entirely,
-- hide **output-focused recipes** for locked items / fluids / Mekanism chemicals (using `TYPE_CHEMICAL` when both mods are present),
-- hide any recipe matching a **locked recipe id** across recipe types,
-- and reconcile back when a stage is granted (via `includeHidden()` on focus lookups).
+With **FTB Teams** as well, unlocks are **team-scoped** via FTB's `TEAM_STAGES`: the whole party shares chapter progress, inventory checks and JEI updates apply for every online member, and `/chapters`, KubeJS `PlayerStages`, and FTB Quests stage rewards all read and write the same team storage. Joining a team adopts that team's stages; leaving personal progress behind follows FTB's team model (see the wiki for migration details).
 
-The result: players only see what they can actually use right now.
+For branching logic (e.g. only grant if some other condition holds), combine **FTB Quests Custom Reward** with KubeJS. Example: `examples/kubejs/server_scripts/ftbquests_chapter_reward.js` in the GitHub repo.
 
----
+### What you can lock
 
-## Commands
+- **Items:** by id, by tag (`#minecraft:swords`), or whole mod (`@create`).
+- **Fluids:** by id, tag, or mod. Buckets, placement, and NeoForge fluid transfers are checked where a server player applies.
+- **Mekanism chemicals:** gas / infusion / slurry / pigment by id, tag, or mod, on Mekanism `ChemicalUtils` paths when a server player is in scope.
+- **Recipes:** by recipe id (`minecraft:diamond_pickaxe`, KubeJS `recipe:…`, etc.). Vanilla crafting-grid recipes are blocked server-side until unlocked.
+- **Whole mod at once:** `@modid` covers items, fluids, and chemicals from that namespace in one stage entry.
+
+Locked items are **auto-dropped** from inventory while the player lacks the stage (tick while online, and on stage removal or reload), so stashing in shulkers does not bypass the lock.
+
+### JEI
+
+With **JEI**, Chapters syncs stages to the client so JEI can hide locked ingredients, hide output recipes for locked items/fluids/chemicals (`TYPE_CHEMICAL` when Mekanism is present), hide recipes by locked recipe id, and show them again after unlock (`includeHidden()` on focus).
+
+### Commands
 
 ```
 /chapters add <player> <stage>
@@ -41,17 +44,15 @@ The result: players only see what they can actually use right now.
 /chapters reload
 ```
 
----
+### Datapack stages
 
-## Datapack stages
-
-Drop JSON files at:
+Path:
 
 ```
 data/<namespace>/chapters/stages/<stage_id>.json
 ```
 
-Example (`data/mypack/chapters/stages/tier1.json`):
+Example `data/mypack/chapters/stages/tier1.json`:
 
 ```json
 {
@@ -76,23 +77,19 @@ Example (`data/mypack/chapters/stages/tier1.json`):
 }
 ```
 
-### Syntax cheatsheet
+#### Syntax
 
 | Prefix | Meaning |
 | --- | --- |
 | `minecraft:foo` | Single id |
-| `#namespace:tag` | Tag (works for items, fluids, chemicals) |
-| `@modid` | Every item **and** fluid **and** Mekanism chemical from that mod |
+| `#namespace:tag` | Tag (items, fluids, chemicals) |
+| `@modid` | All items, fluids, and Mekanism chemicals from that mod |
 
-Optional top-level keys: `namespaces` (same as `@mod`, but for the whole stage), `fluid_namespaces` (extra mods, fluids only), `chemical_namespaces` (extra mods, Mekanism chemicals only).
+Optional keys: `namespaces`, `fluid_namespaces`, `chemical_namespaces`.
 
-If an ingredient appears in **any** stage definition, a player needs **at least one matching stage among every definition that mentions it** — so multiple datapacks / KubeJS scripts can layer rules without fighting each other.
+If something appears in **any** stage file, the player needs **at least one** of the stages that list it (OR across definitions that mention the same ingredient), so packs and scripts can layer rules without overwriting each other.
 
----
-
-## KubeJS integration
-
-Chapters registers a KubeJS plugin and bindings for runtime stage definitions and per-player checks:
+### KubeJS
 
 ```js
 ServerEvents.loaded(event => {
@@ -110,63 +107,118 @@ ServerEvents.loaded(event => {
 })
 ```
 
-Bindings:
+- `ChaptersEvents.defineStage(stageId, entries)`. Multiple calls in the same tick batch into one index rebuild.
+- `PlayerStages.of(player).add(stageId)` / `.remove(stageId)` / `.has(stageId)` / `.get()`
 
-- `ChaptersEvents.defineStage(stageId, entries)` — `entries` is a JS array of strings; multiple `defineStage` calls in the same tick are **batched into a single index rebuild**.
-- `PlayerStages.of(player).add(stageId)`
-- `PlayerStages.of(player).remove(stageId)`
-- `PlayerStages.of(player).has(stageId)`
-- `PlayerStages.of(player).get()` — returns the current stage list
+### Quick start
 
----
+The jar ships **no** preset stages. Quick test: add a datapack stage gating `minecraft:netherite_ingot`, `/reload`, `/chapters check <you> namespace:stage` (false), try `/give`, then `/chapters add` (true). Sample scripts: [examples/kubejs](https://github.com/GabinFqt/chapters/tree/main/examples/kubejs).
 
-## Quick start (in-game)
+### Compatibility
 
-The jar **does not ship preset stages** — you write your own progression. The fastest way to verify it works:
+| Mod | Notes |
+| --- | --- |
+| NeoForge 1.21.1 (21.1.x) | Required |
+| Java 21 | Required |
+| JEI | Optional. Hides locked content client-side |
+| KubeJS | Optional. Bindings load automatically |
+| Mekanism | Optional. Chemical locking; without it, chemical keys in JSON are ignored at index time |
+| FTB Library | Optional. Stage provider for FTB Quests UI |
+| FTB Teams | Optional. Shared team stages when Library + Teams are both present |
+| FTB Quests | Optional. Stage Reward / Task / Stage Required |
 
-1. Add a JSON datapack stage like `data/test/chapters/stages/tutorial.json` gating `minecraft:netherite_ingot`.
-2. `/reload`
-3. `/chapters check Dev test:tutorial` → should be `false`.
-4. `/give Dev minecraft:netherite_ingot 1` → blocked / dropped.
-5. `/chapters add Dev test:tutorial` → item now usable, JEI reveals it.
+Recipe blocking in the mixin targets the **vanilla crafting grid** (`CraftingMenu`) for now. Other stations may still be hidden in JEI when locked but not blocked server-side the same way.
 
-Sample KubeJS scripts live under [`examples/kubejs/`](https://github.com/GabinFqt/chapters/tree/main/examples/kubejs) on the GitHub repo — copy them into your instance's `kubejs/` folder.
+### Links
 
----
-
-## FTB Library / FTB Teams / FTB Quests
-
-Chapters integrates with the FTB stack out of the box:
-
-- With **FTB Library** present, Chapters becomes the active stage provider (via `StageHelper`). FTB Quests' built-in **Stage Reward** grants a chapter on claim, **Stage Task** checks for a chapter, and the **"Stage Required"** quest/chapter field gates progression on a chapter id — all without any extra registration.
-- With **FTB Teams** also present, every unlock is **team-scoped** through the built-in `TEAM_STAGES` property: all members of a party instantly share chapter unlocks, the inventory auditor and JEI hide/reveal run for every online member, and `/chapters add/remove`, `PlayerStages.of(player)` from KubeJS, and FTB Quests' Stage Reward all converge on the same team-wide storage.
-- When a player joins a party they adopt the party's stages; previous personal-team unlocks are not carried over. Pre-existing attachment data on a player's personal team is migrated upward on first login after FTB Teams is added.
-
-For conditional reward flows, pair FTB Quests' **Custom Reward** with KubeJS — see the sample script in `examples/kubejs/server_scripts/ftbquests_chapter_reward.js` on the GitHub repo.
+- **GitHub:** https://github.com/GabinFqt/chapters
+- **Releases:** https://github.com/GabinFqt/chapters/releases
+- **License:** MIT
 
 ---
+
+## CurseForge
+
+Copy from the next line through the end of this section (CurseForge project description supports Markdown: **#** headings, **bold**, *italic*, lists).
+
+# Chapters
+
+**Documentation (datapacks, KubeJS, FTB, examples):** https://github.com/GabinFqt/chapters/wiki
+
+**Chapters** is a progression mod for **NeoForge 1.21.1**, inspired by *GameStages* and *ItemStages*. Name your progression steps *chapters* (stages) and lock **items**, **fluids**, **Mekanism chemicals**, and **recipes** until you unlock them, so players cannot use gated content early.
+
+Built for pack authors who want **one integrated progression layer** on modern NeoForge: datapacks, KubeJS, JEI, Mekanism, and FTB (Library, Teams, Quests).
+
+## FTB Library, Teams, and Quests
+
+- With **FTB Library**, Chapters becomes the FTB **stage provider**. **FTB Quests** can use **Stage Reward** (grant a chapter when claimed), **Stage Task** (require a chapter), and **Stage Required** on quests or chapters, using your chapter ids with *no extra registration*.
+- With **FTB Teams** as well, unlocks live on the **team** and are **shared by the whole party**. Inventory checks and JEI updates apply to all online members. Commands, KubeJS **PlayerStages**, and FTB Quests stage rewards all use the same team storage. Joining a team gives that team's stages; *personal progress does not carry over* the same way (see the wiki for migration notes).
+- For **custom conditions** on rewards, pair **FTB Quests Custom Reward** with KubeJS. Sample: *examples/kubejs/server_scripts/ftbquests_chapter_reward.js* in the GitHub repo.
+
+## What you can lock
+
+- **Items:** single id, tag (hash + namespace + path), or *everything from a mod* with at-sign + modid.
+- **Fluids:** same rules, including buckets and common transfers when a server player is involved.
+- **Mekanism chemicals:** gases, infusions, slurries, pigments by id, tag, or mod (*requires Mekanism*).
+- **Recipes:** by recipe id. **Vanilla crafting table** recipes are blocked on the server until unlocked.
+- **One mod at once:** at-sign + modid can cover items, fluids, and chemicals from that mod in a single stage entry.
+- **Inventory enforcement:** locked items are **dropped automatically** while the player lacks the stage (each tick online, and when stages change or reload).
+
+## JEI
+
+With **JEI** installed, locked ingredients and recipes are **hidden client-side** and return after unlock.
+
+## Commands
+
+Replace *PLAYER* and *STAGE* with real names.
+
+- /chapters add PLAYER STAGE
+- /chapters remove PLAYER STAGE
+- /chapters list PLAYER
+- /chapters check PLAYER STAGE
+- /chapters reload
+
+## Datapacks
+
+- Put each stage JSON in your datapack at **data/NAMESPACE/chapters/stages/STAGE_ID.json** (standard Minecraft datapack layout).
+- Each file can list **items**, **fluids**, **chemicals**, **recipes**, and optional namespace keys.
+- A **plain id** is one entry. A **hash-prefixed** entry selects a **tag**. An **at-sign prefixed** entry selects **everything from that mod** for that category.
+- If several stage files mention the same thing, the player needs **at least one** of the stages that reference it.
+
+## KubeJS
+
+- On server loaded, call **ChaptersEvents.defineStage** with a stage id and an array of strings.
+- Use the **recipe:**, **fluid:**, and **chemical:** prefixes for non-item entries.
+- **PlayerStages.of(player)** supports add, remove, has, and get.
+- Multiple **defineStage** calls in the same server tick **batch** into one rebuild.
+
+## Quick start
+
+The jar ships **no** preset stages.
+
+1. Add a datapack stage that locks **netherite ingot**, then **reload**.
+2. Run **/chapters check** on yourself: should be *false*.
+3. Try **/give** for the item: blocked or dropped.
+4. **/chapters add** the stage: item becomes usable.
+
+Example scripts: **examples/kubejs** on [GitHub](https://github.com/GabinFqt/chapters/tree/main/examples/kubejs).
 
 ## Compatibility
 
-| Mod | Status |
-| --- | --- |
-| **NeoForge 1.21.1** (21.1.x) | Required |
-| **Java 21** | Required |
-| **JEI** | Optional — locked content is hidden client-side when present |
-| **KubeJS** | Optional — bindings registered automatically when present |
-| **Mekanism** | Optional — chemicals can be locked when present; without Mekanism, `chemicals` / `chemical_namespaces` entries are accepted in JSON but build no index |
-| **FTB Library** | Optional — registers Chapters as the FTB stage provider; FTB Quests' Stage Reward / Stage Task / "Stage Required" use chapters automatically |
-| **FTB Teams** | Optional — chapter unlocks are stored on the player's team and shared with every member |
-| **FTB Quests** | Optional — built-in Stage Reward / Task work with chapters; Custom Reward via KubeJS for conditional flows |
+- **NeoForge 1.21.1** and **Java 21** (*required*).
+- **JEI** (*optional*): hides locked content in the recipe viewer.
+- **KubeJS** (*optional*): **ChaptersEvents** and **PlayerStages** when present.
+- **Mekanism** (*optional*): chemical locking.
+- **FTB Library** (*optional*): wires Chapters into FTB Quests stage UI.
+- **FTB Teams** (*optional*): **shared team stages** when Library and Teams are both loaded.
+- **FTB Quests** (*optional*): Stage Reward, Stage Task, Stage Required.
 
-Other workstations (smithing tables, machines) are **not** covered by the recipe-blocking mixin yet — those still hide in JEI when locked client-side, but the server-side block currently targets the vanilla crafting grid (`CraftingMenu`).
+*Limitation:* server-side recipe blocking currently targets the **vanilla crafting menu** first. Other stations may still differ between JEI and the server; see the **wiki** for details.
 
----
+## Links
 
-## Source code & issues
-
-- **GitHub:** [github.com/GabinFqt/chapters](https://github.com/GabinFqt/chapters)
-- **Releases:** [github.com/GabinFqt/chapters/releases](https://github.com/GabinFqt/chapters/releases)
+- **GitHub:** https://github.com/GabinFqt/chapters
+- **Releases:** https://github.com/GabinFqt/chapters/releases
 - **License:** MIT
 
-Issues, suggestions, and pull requests are very welcome.
+Issues and suggestions are welcome on GitHub.

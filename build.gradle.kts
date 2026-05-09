@@ -33,6 +33,11 @@ repositories {
             includeGroup("com.github.rtyley")
         }
     }
+    maven("https://modmaven.dev/") {
+        content {
+            includeGroup("mekanism")
+        }
+    }
 }
 
 neoForge {
@@ -67,6 +72,9 @@ dependencies {
     val jeiVersion = property("jei_version").toString()
     compileOnly("mezz.jei:jei-$minecraftVersion-neoforge:$jeiVersion")
     runtimeOnly("mezz.jei:jei-$minecraftVersion-neoforge:$jeiVersion")
+
+    val mekanismVersion = property("mekanism_version").toString()
+    compileOnly("mekanism:Mekanism:$mekanismVersion:api")
 }
 
 tasks.withType<ProcessResources>().configureEach {

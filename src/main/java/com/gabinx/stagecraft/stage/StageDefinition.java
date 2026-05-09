@@ -23,7 +23,10 @@ public record StageDefinition(
         Set<String> namespaces,
         Set<ResourceLocation> fluids,
         Set<TagKey<Fluid>> fluidTags,
-        Set<String> fluidNamespaces) {
+        Set<String> fluidNamespaces,
+        Set<ResourceLocation> chemicals,
+        Set<ResourceLocation> chemicalTags,
+        Set<String> chemicalNamespaces) {
 
     public static StageDefinition fromJson(ResourceLocation id, JsonObject json) {
         Set<ResourceLocation> items = new LinkedHashSet<>();
@@ -32,6 +35,9 @@ public record StageDefinition(
         Set<ResourceLocation> fluids = new LinkedHashSet<>();
         Set<TagKey<Fluid>> fluidTags = new LinkedHashSet<>();
         Set<String> fluidNamespaces = new LinkedHashSet<>();
+        Set<ResourceLocation> chemicals = new LinkedHashSet<>();
+        Set<ResourceLocation> chemicalTags = new LinkedHashSet<>();
+        Set<String> chemicalNamespaces = new LinkedHashSet<>();
 
         JsonArray namespacesJson = json.getAsJsonArray("namespaces");
         if (namespacesJson != null) {
@@ -42,6 +48,7 @@ public record StageDefinition(
                 String n = element.getAsString();
                 addNamespace(namespaces, n);
                 addFluidNamespace(fluidNamespaces, n);
+                addChemicalNamespace(chemicalNamespaces, n);
             }
         }
 
@@ -55,6 +62,16 @@ public record StageDefinition(
             }
         }
 
+        JsonArray chemicalNamespacesJson = json.getAsJsonArray("chemical_namespaces");
+        if (chemicalNamespacesJson != null) {
+            for (JsonElement element : chemicalNamespacesJson) {
+                if (!element.isJsonPrimitive()) {
+                    continue;
+                }
+                addChemicalNamespace(chemicalNamespaces, element.getAsString());
+            }
+        }
+
         JsonArray values = json.getAsJsonArray("items");
         if (values != null) {
             for (JsonElement element : values) {
@@ -65,6 +82,7 @@ public record StageDefinition(
                 accumulateEntry(itemEntry, items, tags, namespaces);
                 if (itemEntry != null && itemEntry.trim().startsWith("@")) {
                     accumulateFluidEntry(itemEntry.trim(), fluids, fluidTags, fluidNamespaces);
+                    accumulateChemicalEntry(itemEntry.trim(), chemicals, chemicalTags, chemicalNamespaces);
                 }
             }
         }
@@ -79,7 +97,27 @@ public record StageDefinition(
             }
         }
 
-        return new StageDefinition(id, items, tags, namespaces, fluids, fluidTags, fluidNamespaces);
+        JsonArray chemicalValues = json.getAsJsonArray("chemicals");
+        if (chemicalValues != null) {
+            for (JsonElement element : chemicalValues) {
+                if (!element.isJsonPrimitive()) {
+                    continue;
+                }
+                accumulateChemicalEntry(element.getAsString(), chemicals, chemicalTags, chemicalNamespaces);
+            }
+        }
+
+        return new StageDefinition(
+                id,
+                items,
+                tags,
+                namespaces,
+                fluids,
+                fluidTags,
+                fluidNamespaces,
+                chemicals,
+                chemicalTags,
+                chemicalNamespaces);
     }
 
     /**
@@ -140,6 +178,10 @@ public record StageDefinition(
         addNamespace(namespacesOut, raw);
     }
 
+    static void addChemicalNamespace(Set<String> namespacesOut, String raw) {
+        addNamespace(namespacesOut, raw);
+    }
+
     /**
      * One stage-list fluid entry from a datapack or KubeJS: fluid id, {@code #fluid_tag}, or {@code @} mod namespace for
      * every fluid registered under that namespace.
@@ -170,6 +212,39 @@ public record StageDefinition(
         ResourceLocation fluidId = ResourceLocation.tryParse(trimmed);
         if (fluidId != null) {
             fluidsOut.add(fluidId);
+        }
+    }
+
+    /**
+     * Mekanism chemical id, {@code #chemical_tag} on Mekanism's chemical registry, or {@code @} mod namespace (requires
+     * Mekanism at runtime to expand).
+     */
+    public static void accumulateChemicalEntry(
+            String raw,
+            Set<ResourceLocation> chemicalsOut,
+            Set<ResourceLocation> chemicalTagIdsOut,
+            Set<String> chemicalNamespacesOut) {
+        if (raw == null) {
+            return;
+        }
+        String trimmed = raw.trim();
+        if (trimmed.isEmpty()) {
+            return;
+        }
+        if (trimmed.startsWith("#")) {
+            ResourceLocation tagId = ResourceLocation.tryParse(trimmed.substring(1).trim());
+            if (tagId != null) {
+                chemicalTagIdsOut.add(tagId);
+            }
+            return;
+        }
+        if (trimmed.startsWith("@")) {
+            addChemicalNamespace(chemicalNamespacesOut, trimmed.substring(1));
+            return;
+        }
+        ResourceLocation chemicalId = ResourceLocation.tryParse(trimmed);
+        if (chemicalId != null) {
+            chemicalsOut.add(chemicalId);
         }
     }
 
@@ -229,5 +304,8 @@ public record StageDefinition(
         fluids = Set.copyOf(fluids);
         fluidTags = Set.copyOf(fluidTags);
         fluidNamespaces = Set.copyOf(fluidNamespaces);
+        chemicals = Set.copyOf(chemicals);
+        chemicalTags = Set.copyOf(chemicalTags);
+        chemicalNamespaces = Set.copyOf(chemicalNamespaces);
     }
 }

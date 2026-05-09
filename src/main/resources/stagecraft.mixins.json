@@ -2,10 +2,13 @@
   "required": true,
   "minVersion": "0.8",
   "package": "com.gabinx.stagecraft.mixin",
+  "plugin": "com.gabinx.stagecraft.mixin.StagecraftMixinPlugin",
   "compatibilityLevel": "JAVA_21",
   "mixins": [
+    "AbstractContainerMenuMixin",
     "CraftingMenuMixin",
-    "FluidUtilMixin"
+    "FluidUtilMixin",
+    "compat.mekanism.ChemicalUtilsMixin"
   ],
   "injectors": {
     "defaultRequire": 1

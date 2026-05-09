@@ -8,7 +8,11 @@ public final class StagecraftJeiPlugin {
     private StagecraftJeiPlugin() {
     }
 
-    public static void onLockedIngredientsChanged(Set<ResourceLocation> lockedItems, Set<ResourceLocation> lockedFluids) {
-        StagecraftJeiModPlugin.applyLocked(lockedItems, lockedFluids);
+    public static void onLockedIngredientsChanged(
+            Set<ResourceLocation> lockedItems,
+            Set<ResourceLocation> lockedFluids,
+            Set<ResourceLocation> lockedChemicals
+    ) {
+        StagecraftJeiModPlugin.applyLocked(lockedItems, lockedFluids, lockedChemicals);
     }
 }

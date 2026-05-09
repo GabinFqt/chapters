@@ -18,6 +18,7 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.material.Fluid;
 import net.minecraft.world.level.material.Fluids;
+import net.neoforged.fml.ModList;
 import net.neoforged.neoforge.server.ServerLifecycleHooks;
 import net.neoforged.neoforge.fluids.FluidStack;
 
@@ -48,6 +49,9 @@ public final class StageManager extends SimpleJsonResourceReloadListener {
 
     /** Fluid kind registry key → stage ids that gate this fluid. */
     private Map<ResourceLocation, Set<ResourceLocation>> fluidStagesIndex = Map.of();
+
+    /** Mekanism chemical registry key → stage ids that gate this chemical (empty when Mekanism is absent). */
+    private Map<ResourceLocation, Set<ResourceLocation>> chemicalStagesIndex = Map.of();
 
     private StageManager() {
         super(GSON, "stagecraft/stages");
@@ -152,6 +156,22 @@ public final class StageManager extends SimpleJsonResourceReloadListener {
 
         itemStagesIndex = Map.copyOf(itemMap);
         fluidStagesIndex = Map.copyOf(fluidMap);
+        chemicalStagesIndex = rebuildChemicalStagesIndex(mergedDefinitions);
+    }
+
+    @SuppressWarnings("unchecked")
+    private static Map<ResourceLocation, Set<ResourceLocation>> rebuildChemicalStagesIndex(List<StageDefinition> defs) {
+        if (!ModList.get().isLoaded("mekanism")) {
+            return Map.of();
+        }
+        try {
+            Class<?> indexClass = Class.forName("com.gabinx.stagecraft.compat.mekanism.MekanismChemicalIndex");
+            Object raw = indexClass.getMethod("buildIndex", List.class).invoke(null, defs);
+            return Map.copyOf((Map<ResourceLocation, Set<ResourceLocation>>) raw);
+        } catch (ReflectiveOperationException e) {
+            Stagecraft.LOGGER.error("Failed to build Mekanism chemical stage index", e);
+            return Map.of();
+        }
     }
 
     private static void auditLoadedPlayersAfterReload() {
@@ -177,6 +197,13 @@ public final class StageManager extends SimpleJsonResourceReloadListener {
      */
     public synchronized Map<ResourceLocation, Set<ResourceLocation>> fluidStagesIndexView() {
         return fluidStagesIndex;
+    }
+
+    /**
+     * Mekanism chemical id → defining stage ids (for recipe viewers). Empty when Mekanism is not installed.
+     */
+    public synchronized Map<ResourceLocation, Set<ResourceLocation>> chemicalStagesIndexView() {
+        return chemicalStagesIndex;
     }
 
     public synchronized Map<ResourceLocation, StageDefinition> allDefinitions() {
@@ -231,6 +258,22 @@ public final class StageManager extends SimpleJsonResourceReloadListener {
             return false;
         }
         Set<ResourceLocation> defining = fluidStagesIndex.get(kind);
+        if (defining == null || defining.isEmpty()) {
+            return false;
+        }
+        for (ResourceLocation stageId : defining) {
+            if (stages.has(stageId)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    public synchronized boolean isChemicalLocked(PlayerStages stages, ResourceLocation chemicalRegistryKey) {
+        if (chemicalRegistryKey == null) {
+            return false;
+        }
+        Set<ResourceLocation> defining = chemicalStagesIndex.get(chemicalRegistryKey);
         if (defining == null || defining.isEmpty()) {
             return false;
         }

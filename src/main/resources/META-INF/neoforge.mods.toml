@@ -38,18 +38,11 @@ ordering="NONE"
 side="CLIENT"
 
 [[dependencies.${mod_id}]]
-modId="roughlyenoughitems"
+modId="mekanism"
 type="optional"
-versionRange="[16,)"
+versionRange="[10.7.19,)"
 ordering="NONE"
-side="CLIENT"
-
-[[dependencies.${mod_id}]]
-modId="emi"
-type="optional"
-versionRange="[1.1,)"
-ordering="NONE"
-side="CLIENT"
+side="BOTH"
 
 [[mixins]]
 config="${mod_id}.mixins.json"

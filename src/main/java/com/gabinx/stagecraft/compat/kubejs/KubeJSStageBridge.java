@@ -53,20 +53,36 @@ public final class KubeJSStageBridge {
             var fluids = new LinkedHashSet<ResourceLocation>();
             var fluidTags = new LinkedHashSet<TagKey<Fluid>>();
             var fluidNamespaces = new LinkedHashSet<String>();
+            var chemicals = new LinkedHashSet<ResourceLocation>();
+            var chemicalTags = new LinkedHashSet<ResourceLocation>();
+            var chemicalNamespaces = new LinkedHashSet<String>();
 
             for (String raw : entry.getValue()) {
                 if (raw != null && raw.regionMatches(true, 0, "fluid:", 0, 6)) {
                     StageDefinition.accumulateFluidEntry(raw.substring(6).trim(), fluids, fluidTags, fluidNamespaces);
+                } else if (raw != null && raw.regionMatches(true, 0, "chemical:", 0, 9)) {
+                    StageDefinition.accumulateChemicalEntry(raw.substring(9).trim(), chemicals, chemicalTags, chemicalNamespaces);
                 } else {
                     StageDefinition.accumulateEntry(raw, items, tags, namespaces);
-                    // Match items: `@mod_id` gates every fluid in that namespace too (same idea as datapack `namespaces`).
+                    // Match items: `@mod_id` gates every fluid and Mekanism chemical in that namespace too.
                     if (raw != null && raw.trim().startsWith("@")) {
                         StageDefinition.accumulateFluidEntry(raw.trim(), fluids, fluidTags, fluidNamespaces);
+                        StageDefinition.accumulateChemicalEntry(raw.trim(), chemicals, chemicalTags, chemicalNamespaces);
                     }
                 }
             }
 
-            defs.add(new StageDefinition(id, items, tags, namespaces, fluids, fluidTags, fluidNamespaces));
+            defs.add(new StageDefinition(
+                    id,
+                    items,
+                    tags,
+                    namespaces,
+                    fluids,
+                    fluidTags,
+                    fluidNamespaces,
+                    chemicals,
+                    chemicalTags,
+                    chemicalNamespaces));
         }
 
         StageManager.get().setRuntimeDefinitions(defs);

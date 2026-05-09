@@ -1,9 +1,7 @@
 package com.gabinx.stagecraft.compat;
 
 import com.gabinx.stagecraft.Stagecraft;
-import com.gabinx.stagecraft.compat.emi.StagecraftEmiPlugin;
 import com.gabinx.stagecraft.compat.jei.StagecraftJeiPlugin;
-import com.gabinx.stagecraft.compat.rei.StagecraftReiPlugin;
 import com.gabinx.stagecraft.stage.ClientStageCache;
 import com.gabinx.stagecraft.stage.StageManager;
 import net.minecraft.resources.ResourceLocation;
@@ -20,19 +18,15 @@ public final class RecipeViewerCompat {
     public static void refresh() {
         Set<ResourceLocation> lockedItems = getLockedItemIds();
         Set<ResourceLocation> lockedFluids = getLockedFluidIds();
+        Set<ResourceLocation> lockedChemicals = getLockedChemicalIds();
         Stagecraft.LOGGER.debug(
-                "Recipe viewer refresh — locked items: {}, locked fluids: {}",
+                "Recipe viewer refresh — locked items: {}, locked fluids: {}, locked chemicals: {}",
                 lockedItems.size(),
-                lockedFluids.size()
+                lockedFluids.size(),
+                lockedChemicals.size()
         );
         if (ModList.get().isLoaded("jei")) {
-            StagecraftJeiPlugin.onLockedIngredientsChanged(lockedItems, lockedFluids);
-        }
-        if (ModList.get().isLoaded("roughlyenoughitems")) {
-            StagecraftReiPlugin.onLockedIngredientsChanged(lockedItems, lockedFluids);
-        }
-        if (ModList.get().isLoaded("emi")) {
-            StagecraftEmiPlugin.onLockedIngredientsChanged(lockedItems, lockedFluids);
+            StagecraftJeiPlugin.onLockedIngredientsChanged(lockedItems, lockedFluids, lockedChemicals);
         }
     }
 
@@ -79,6 +73,28 @@ public final class RecipeViewerCompat {
             }
             if (!unlocked) {
                 locked.add(fluidId);
+            }
+        }
+        return locked;
+    }
+
+    private static Set<ResourceLocation> getLockedChemicalIds() {
+        Set<ResourceLocation> activeStages = ClientStageCache.snapshot();
+        Set<ResourceLocation> locked = new LinkedHashSet<>();
+
+        Map<ResourceLocation, Set<ResourceLocation>> index = StageManager.get().chemicalStagesIndexView();
+        for (Map.Entry<ResourceLocation, Set<ResourceLocation>> entry : index.entrySet()) {
+            ResourceLocation chemicalId = entry.getKey();
+            Set<ResourceLocation> definingStages = entry.getValue();
+            boolean unlocked = false;
+            for (ResourceLocation required : definingStages) {
+                if (activeStages.contains(required)) {
+                    unlocked = true;
+                    break;
+                }
+            }
+            if (!unlocked) {
+                locked.add(chemicalId);
             }
         }
         return locked;

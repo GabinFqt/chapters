@@ -10,4 +10,6 @@ ServerEvents.loaded(event => {
     'minecraft:apple',
   )
   StagecraftEvents.defineStage('stagecraft:script_vanilla_all', '@minecraft')
+  // With Mekanism: optional explicit chemicals (or rely on @namespace above for mekanism:* chemicals too):
+  // StagecraftEvents.defineStage('stagecraft:script_mek_hydrogen', 'chemical:mekanism:hydrogen')
 })

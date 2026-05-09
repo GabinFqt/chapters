@@ -19,14 +19,14 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.LocalCapture;
 
-import java.util.Optional;
-
 @Mixin(CraftingMenu.class)
 public abstract class CraftingMenuMixin {
     @Inject(
         method = "slotChangedCraftingGrid",
         at = @At(value = "INVOKE", target = "Lnet/minecraft/world/inventory/ResultContainer;setItem(ILnet/minecraft/world/item/ItemStack;)V"),
         cancellable = true,
+        // Do not capture Optional<RecipeHolder<?>> here: other mods’ transformers often drop that local, which breaks
+        // CAPTURE_FAILHARD. We only need CraftingInput, ServerPlayer, and the computed result stack.
         locals = LocalCapture.CAPTURE_FAILHARD
     )
     private static void stagecraft$hideLockedResult(
@@ -39,8 +39,7 @@ public abstract class CraftingMenuMixin {
         CallbackInfo ci,
         CraftingInput craftingInput,
         ServerPlayer serverPlayer,
-        ItemStack result,
-        Optional<RecipeHolder<CraftingRecipe>> optional
+        ItemStack result
     ) {
         if (level.isClientSide) {
             return;

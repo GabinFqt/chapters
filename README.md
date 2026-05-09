@@ -18,26 +18,15 @@ It lets you:
 - `/stagecraft check <player> <stage>`
 - `/stagecraft reload`
 
-## Quick test commands (in-game)
+## Quick test (in-game)
 
-Assuming your player name is `Dev` and the example stage file is loaded:
-- `/stagecraft reload`
-- `/stagecraft list Dev`
-- `/stagecraft check Dev stagecraft:example`
-- `/stagecraft add Dev stagecraft:example`
-- `/stagecraft check Dev stagecraft:example`
-- `/stagecraft remove Dev stagecraft:example`
-- `/stagecraft list Dev`
+The jar does **not** ship preset stages: add your own JSON under [`Datapack stages`](#datapack-stages), or copy [`examples/kubejs/`](examples/kubejs/) into your instance’s `kubejs/` folder (it registers `stagecraft:script_pickups` and related runtime stages).
 
-Useful item-lock checks with the bundled example (`netherite_ingot`, `#minecraft:swords`, `enchanted_book`):
-- `/clear Dev`
-- `/give Dev minecraft:netherite_ingot 1`
-- `/give Dev minecraft:diamond_sword 1`
-- `/give Dev minecraft:enchanted_book 1`
+With a datapack stage id like `myproject:tutorial` (file `data/myproject/stagecraft/stages/tutorial.json`):
 
-Suggested flow:
-1. Run the `give` commands while the stage is removed, then verify locked items are dropped/blocked.
-2. Run `/stagecraft add Dev stagecraft:example` and try again; items should now be allowed.
+1. `/reload`
+2. `/stagecraft check Dev/myproject:tutorial`
+3. `/give Dev minecraft:netherite_ingot 1` (if that item is gated in your JSON) → should be blocked until you `/stagecraft add Dev myproject:tutorial`
 
 ## Datapack stages
 

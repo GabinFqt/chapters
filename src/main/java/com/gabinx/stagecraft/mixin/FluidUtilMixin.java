@@ -7,6 +7,7 @@ import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
+import net.neoforged.neoforge.fluids.FluidActionResult;
 import net.neoforged.neoforge.fluids.FluidStack;
 import net.neoforged.neoforge.fluids.FluidUtil;
 import net.neoforged.neoforge.fluids.capability.IFluidHandler;
@@ -25,7 +26,14 @@ public abstract class FluidUtilMixin {
         method = "tryFillContainer(Lnet/minecraft/world/item/ItemStack;Lnet/neoforged/neoforge/fluids/capability/IFluidHandler;ILnet/minecraft/world/entity/player/Player;Z)Lnet/neoforged/neoforge/fluids/FluidActionResult;",
         at = @At("HEAD")
     )
-    private static void stagecraft$beginTryFill(ItemStack container, IFluidHandler fluidSource, int maxAmount, @Nullable Player player, boolean doFill) {
+    private static void stagecraft$beginTryFill(
+            ItemStack container,
+            IFluidHandler fluidSource,
+            int maxAmount,
+            @Nullable Player player,
+            boolean doFill,
+            CallbackInfoReturnable<FluidActionResult> cir
+    ) {
         STAGECRAFT_FLUID_ACTOR.set(player);
     }
 
@@ -33,7 +41,14 @@ public abstract class FluidUtilMixin {
         method = "tryFillContainer(Lnet/minecraft/world/item/ItemStack;Lnet/neoforged/neoforge/fluids/capability/IFluidHandler;ILnet/minecraft/world/entity/player/Player;Z)Lnet/neoforged/neoforge/fluids/FluidActionResult;",
         at = @At("RETURN")
     )
-    private static void stagecraft$endTryFill(ItemStack container, IFluidHandler fluidSource, int maxAmount, @Nullable Player player, boolean doFill) {
+    private static void stagecraft$endTryFill(
+            ItemStack container,
+            IFluidHandler fluidSource,
+            int maxAmount,
+            @Nullable Player player,
+            boolean doFill,
+            CallbackInfoReturnable<FluidActionResult> cir
+    ) {
         STAGECRAFT_FLUID_ACTOR.remove();
     }
 
@@ -41,7 +56,14 @@ public abstract class FluidUtilMixin {
         method = "tryEmptyContainer(Lnet/minecraft/world/item/ItemStack;Lnet/neoforged/neoforge/fluids/capability/IFluidHandler;ILnet/minecraft/world/entity/player/Player;Z)Lnet/neoforged/neoforge/fluids/FluidActionResult;",
         at = @At("HEAD")
     )
-    private static void stagecraft$beginTryEmpty(ItemStack container, IFluidHandler fluidDestination, int maxAmount, @Nullable Player player, boolean doDrain) {
+    private static void stagecraft$beginTryEmpty(
+            ItemStack container,
+            IFluidHandler fluidDestination,
+            int maxAmount,
+            @Nullable Player player,
+            boolean doDrain,
+            CallbackInfoReturnable<FluidActionResult> cir
+    ) {
         STAGECRAFT_FLUID_ACTOR.set(player);
     }
 
@@ -49,7 +71,14 @@ public abstract class FluidUtilMixin {
         method = "tryEmptyContainer(Lnet/minecraft/world/item/ItemStack;Lnet/neoforged/neoforge/fluids/capability/IFluidHandler;ILnet/minecraft/world/entity/player/Player;Z)Lnet/neoforged/neoforge/fluids/FluidActionResult;",
         at = @At("RETURN")
     )
-    private static void stagecraft$endTryEmpty(ItemStack container, IFluidHandler fluidDestination, int maxAmount, @Nullable Player player, boolean doDrain) {
+    private static void stagecraft$endTryEmpty(
+            ItemStack container,
+            IFluidHandler fluidDestination,
+            int maxAmount,
+            @Nullable Player player,
+            boolean doDrain,
+            CallbackInfoReturnable<FluidActionResult> cir
+    ) {
         STAGECRAFT_FLUID_ACTOR.remove();
     }
 

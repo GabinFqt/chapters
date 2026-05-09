@@ -1,6 +1,12 @@
 # Chapters (NeoForge 1.21.1)
 
+<p align="center">
+  <img src="src/main/resources/chapters_logo.png" alt="Chapters logo" width="384">
+</p>
+
 Chapters is a progression mod inspired by GameStages + ItemStages.
+
+**Documentation (datapacks, KubeJS, examples, troubleshooting): [GitHub Wiki](https://github.com/GabinFqt/chapters/wiki)**
 
 It lets you:
 - lock items behind named stages
@@ -22,7 +28,7 @@ It lets you:
 
 ## Quick test (in-game)
 
-The jar does **not** ship preset stages: add your own JSON under [`Datapack stages`](#datapack-stages), or copy [`examples/kubejs/`](examples/kubejs/) into your instance’s `kubejs/` folder (it registers `chapters:script_pickups` and related runtime stages).
+The jar does **not** ship preset stages: add your own JSON under [`Datapack stages`](#datapack-stages); copy [`examples/datapack/tutorial`](examples/datapack/tutorial/) into `saves/<world>/datapacks/`; or copy [`examples/kubejs/`](examples/kubejs/) into your instance’s `kubejs/` folder (it registers `chapters:script_pickups` and related runtime stages).
 
 With a datapack stage id like `myproject:tutorial` (file `data/myproject/chapters/stages/tutorial.json`):
 
@@ -120,6 +126,8 @@ Build:
 ```
 
 Example KubeJS scripts for local testing live under [`examples/kubejs/`](examples/kubejs/) (copy into your instance’s `kubejs/` folder).
+
+**Wiki sources** for the [GitHub Wiki](https://github.com/GabinFqt/chapters/wiki) live in [`wiki/`](wiki/). Maintainers: create the Wiki’s **first page** on GitHub if `*.wiki.git` is missing, then run `./scripts/publish-wiki.sh` (needs [`gh`](https://cli.github.com/) auth).
 
 ## Releases
 

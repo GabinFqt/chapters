@@ -1,6 +1,8 @@
 package com.gabinx.stagecraft.mixin;
 
 import com.gabinx.stagecraft.stage.LockResolver;
+
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.network.protocol.game.ClientboundContainerSetSlotPacket;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.crafting.CraftingInput;
@@ -11,8 +13,11 @@ import net.minecraft.world.inventory.ResultContainer;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.CraftingRecipe;
 import net.minecraft.world.item.crafting.RecipeHolder;
+import net.minecraft.world.item.crafting.RecipeType;
 import net.minecraft.world.level.Level;
 import org.jetbrains.annotations.Nullable;
+
+import java.util.Optional;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -45,7 +50,16 @@ public abstract class CraftingMenuMixin {
             return;
         }
 
-        if (result.isEmpty() || !LockResolver.isLocked(serverPlayer, result)) {
+        ResourceLocation recipeId = null;
+        if (level.getServer() != null) {
+            Optional<RecipeHolder<CraftingRecipe>> resolved = level.getServer()
+                    .getRecipeManager()
+                    .getRecipeFor(RecipeType.CRAFTING, craftingInput, level, recipe);
+            recipeId = resolved.map(RecipeHolder::id).orElse(null);
+        }
+        boolean outputLocked = !result.isEmpty() && LockResolver.isLocked(serverPlayer, result);
+        boolean recipeLocked = recipeId != null && LockResolver.isRecipeLocked(serverPlayer, recipeId);
+        if (!(outputLocked || recipeLocked)) {
             return;
         }
 

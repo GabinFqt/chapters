@@ -56,12 +56,15 @@ public final class KubeJSStageBridge {
             var chemicals = new LinkedHashSet<ResourceLocation>();
             var chemicalTags = new LinkedHashSet<ResourceLocation>();
             var chemicalNamespaces = new LinkedHashSet<String>();
+            var recipes = new LinkedHashSet<ResourceLocation>();
 
             for (String raw : entry.getValue()) {
                 if (raw != null && raw.regionMatches(true, 0, "fluid:", 0, 6)) {
                     StageDefinition.accumulateFluidEntry(raw.substring(6).trim(), fluids, fluidTags, fluidNamespaces);
                 } else if (raw != null && raw.regionMatches(true, 0, "chemical:", 0, 9)) {
                     StageDefinition.accumulateChemicalEntry(raw.substring(9).trim(), chemicals, chemicalTags, chemicalNamespaces);
+                } else if (raw != null && raw.regionMatches(true, 0, "recipe:", 0, 7)) {
+                    StageDefinition.accumulateRecipeEntry(raw.substring(7).trim(), recipes);
                 } else {
                     StageDefinition.accumulateEntry(raw, items, tags, namespaces);
                     // Match items: `@mod_id` gates every fluid and Mekanism chemical in that namespace too.
@@ -82,7 +85,8 @@ public final class KubeJSStageBridge {
                     fluidNamespaces,
                     chemicals,
                     chemicalTags,
-                    chemicalNamespaces));
+                    chemicalNamespaces,
+                    recipes));
         }
 
         StageManager.get().setRuntimeDefinitions(defs);

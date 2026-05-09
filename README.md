@@ -6,8 +6,9 @@ It lets you:
 - lock items behind named stages
 - lock fluids (tags, ids, whole mods) behind named stages
 - lock Mekanism **chemicals** (unified gas / infusion / slurry / pigment registry) behind named stages when Mekanism is installed
+- lock **recipes by id** behind named stages (datapack `recipes` array or KubeJS `recipe:…`; vanilla crafting-grid recipes are blocked server-side until unlocked; **JEI** hides those recipes by id across types)
 - prevent pickup of locked items
-- block crafting of locked items
+- block crafting locked items **or** blocked recipe ids on the crafting grid
 - auto-drop locked items from the player inventory (every second while online, and when a stage is removed or definitions reload)
 - push client stage changes so **JEI** can hide locked entries (optional mod)
 
@@ -53,6 +54,9 @@ Example:
     "mekanism:hydrogen",
     "#mekanism:gases",
     "@mekanism"
+  ],
+  "recipes": [
+    "minecraft:diamond_pickaxe"
   ]
 }
 ```
@@ -64,7 +68,8 @@ Rules:
 - Optional `chemical_namespaces`: **extra** namespaces that only affect Mekanism chemicals (additive).
 - Optional `fluids`: `#` prefixes are **fluid tags**; `@` prefixes are mods (every fluid in that namespace); other strings are fluid ids.
 - Optional `chemicals` (Mekanism): `#` prefixes are **chemical tags** on Mekanism’s chemical registry; `@` prefixes are mods (every chemical in that namespace); other strings are chemical ids (e.g. `mekanism:hydrogen`).
-- If an ingredient appears in any stage definition, a player needs at least one matching stage **among every definition that mentions that ingredient**: for items — use/pickup/crafting; for fluids — transferring with tanks or buckets/vanilla placement (NeoForge fluid util); for chemicals — Mekanism `ChemicalUtils` insert/extract paths when a **server player** is in scope (container slot handling) and the transfer is **not** `AutomationType.EXTERNAL` (tube/pipe automation is not gated the same way).
+- Optional `recipes`: list of recipe **holder** ids (`minecraft:diamond_pickaxe`, etc.—no `#`/`@`). Same stage rule as ingredients: locked until the player has at least one stage among all definitions listing that recipe. Enforced on the **vanilla crafting grid** (`CraftingMenu`); other workstations (smithing, machines) are **not** covered by that mixin yet—the recipe still hides in JEI when locked client-side.
+- If an ingredient appears in any stage definition, a player needs at least one matching stage **among every definition that mentions that ingredient**: for items — use/pickup/crafting; for fluids — transferring with tanks or buckets/vanilla placement (NeoForge fluid util); for chemicals — Mekanism `ChemicalUtils` insert/extract paths when a **server player** is in scope (container slot handling) and the transfer is **not** `AutomationType.EXTERNAL` (tube/pipe automation is not gated the same way); for locked **recipe ids** — crafting-grid result for that recipe.
 
 **Mekanism:** optional dependency; without Mekanism, `chemicals` / `chemical_namespaces` entries are accepted in JSON but build no index until the mod is present.
 
@@ -72,7 +77,7 @@ Rules:
 
 Stagecraft registers a KubeJS plugin and bindings:
 
-- `StagecraftEvents.defineStage(stageId, entries)` — `entries` must be a JS list (array) of item-style strings (`@mod` also locks that mod’s fluids and Mekanism chemicals), plus `fluid:…` and `chemical:…` overrides in the same list. Definitions are applied **once per server tick** after your script runs so many `defineStage` calls in one `ServerEvents.loaded` callback batch into a single reload (indices are rebuilt once).
+- `StagecraftEvents.defineStage(stageId, entries)` — `entries` must be a JS list (array) of item-style strings (`@mod` also locks that mod’s fluids and Mekanism chemicals), plus `fluid:…`, `chemical:…`, and `recipe:…` (holder id) overrides in the same list. Definitions are applied **once per server tick** after your script runs so many `defineStage` calls in one `ServerEvents.loaded` callback batch into a single reload (indices are rebuilt once).
 - `PlayerStages.of(player).add(stageId)`
 - `PlayerStages.of(player).remove(stageId)`
 - `PlayerStages.of(player).has(stageId)`
@@ -86,7 +91,8 @@ ServerEvents.loaded(event => {
     'mypack:tier1',
     [
       'minecraft:netherite_ingot',
-      '#minecraft:swords'
+      '#minecraft:swords',
+      'recipe:minecraft:diamond_pickaxe'
     ]
   )
 })
@@ -99,7 +105,7 @@ ServerEvents.commandRegistry(event => {
 
 ## Recipe viewer (JEI)
 
-Stagecraft integrates optionally with **JEI**: when client stage payloads arrive, locked item / fluid / Mekanism chemical ids are recomputed and hidden in JEI (ingredients + output-focused recipes; Mekanism chemicals use `TYPE_CHEMICAL` when both mods are present), with unlock reconciliation via `includeHidden()` on focus lookups.
+Stagecraft integrates optionally with **JEI**: when client stage payloads arrive, locked item / fluid / Mekanism chemical ids and locked **recipe ids** are recomputed: ingredients are hidden, output-focused recipes are hidden where applicable (Mekanism chemicals use `TYPE_CHEMICAL` when both mods are present), and recipes matching a locked id are hidden across JEI recipe types, with unlock reconciliation via `includeHidden()` on focus lookups.
 
 ## Development
 

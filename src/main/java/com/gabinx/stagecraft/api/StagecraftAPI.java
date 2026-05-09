@@ -2,6 +2,7 @@ package com.gabinx.stagecraft.api;
 
 import com.gabinx.stagecraft.StagecraftRegistries;
 import com.gabinx.stagecraft.event.InventoryAuditor;
+import com.gabinx.stagecraft.network.ClientboundRecipeStageIndexPayload;
 import com.gabinx.stagecraft.network.ClientboundStageDeltaPayload;
 import com.gabinx.stagecraft.network.ClientboundStagesPayload;
 import com.gabinx.stagecraft.stage.PlayerStages;
@@ -10,6 +11,7 @@ import com.gabinx.stagecraft.stage.StageManager;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.neoforge.network.PacketDistributor;
+import net.neoforged.neoforge.server.ServerLifecycleHooks;
 
 import java.util.Optional;
 import java.util.Set;
@@ -53,5 +55,28 @@ public final class StagecraftAPI {
 
     public static void syncAll(ServerPlayer player) {
         PacketDistributor.sendToPlayer(player, new ClientboundStagesPayload(getStages(player)));
+        syncRecipeStageIndexToPlayer(player);
+    }
+
+    /**
+     * Sends the server's recipe lock index so JEI can evaluate {@code recipe:…} locks defined only on the server
+     * (e.g. KubeJS {@code defineStage}).
+     */
+    public static void syncRecipeStageIndexToPlayer(ServerPlayer player) {
+        PacketDistributor.sendToPlayer(
+                player,
+                new ClientboundRecipeStageIndexPayload(StageManager.get().recipeStagesIndexView()));
+    }
+
+    /** Broadcast after stage definition rebuild (datapack reload, KubeJS flush, etc.). */
+    public static void broadcastRecipeStageIndex() {
+        var server = ServerLifecycleHooks.getCurrentServer();
+        if (server == null) {
+            return;
+        }
+        var payload = new ClientboundRecipeStageIndexPayload(StageManager.get().recipeStagesIndexView());
+        for (ServerPlayer p : server.getPlayerList().getPlayers()) {
+            PacketDistributor.sendToPlayer(p, payload);
+        }
     }
 }

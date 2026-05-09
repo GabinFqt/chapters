@@ -5,6 +5,7 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.gabinx.stagecraft.Stagecraft;
+import com.gabinx.stagecraft.api.StagecraftAPI;
 import com.gabinx.stagecraft.event.InventoryAuditor;
 import net.minecraft.core.Holder;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -53,6 +54,9 @@ public final class StageManager extends SimpleJsonResourceReloadListener {
     /** Mekanism chemical registry key → stage ids that gate this chemical (empty when Mekanism is absent). */
     private Map<ResourceLocation, Set<ResourceLocation>> chemicalStagesIndex = Map.of();
 
+    /** Recipe holder id → stage ids that gate this recipe. */
+    private Map<ResourceLocation, Set<ResourceLocation>> recipeStagesIndex = Map.of();
+
     private StageManager() {
         super(GSON, "stagecraft/stages");
     }
@@ -99,6 +103,7 @@ public final class StageManager extends SimpleJsonResourceReloadListener {
 
         Map<ResourceLocation, Set<ResourceLocation>> itemMap = new HashMap<>();
         Map<ResourceLocation, Set<ResourceLocation>> fluidMap = new HashMap<>();
+        Map<ResourceLocation, Set<ResourceLocation>> recipeMap = new HashMap<>();
 
         for (StageDefinition def : mergedDefinitions) {
             for (ResourceLocation itemId : def.items()) {
@@ -152,11 +157,17 @@ public final class StageManager extends SimpleJsonResourceReloadListener {
                     }
                 }
             }
+
+            for (ResourceLocation recipeId : def.recipes()) {
+                recipeMap.computeIfAbsent(recipeId, k -> new LinkedHashSet<>()).add(def.id());
+            }
         }
 
         itemStagesIndex = Map.copyOf(itemMap);
         fluidStagesIndex = Map.copyOf(fluidMap);
         chemicalStagesIndex = rebuildChemicalStagesIndex(mergedDefinitions);
+        recipeStagesIndex = Map.copyOf(recipeMap);
+        StagecraftAPI.broadcastRecipeStageIndex();
     }
 
     @SuppressWarnings("unchecked")
@@ -204,6 +215,13 @@ public final class StageManager extends SimpleJsonResourceReloadListener {
      */
     public synchronized Map<ResourceLocation, Set<ResourceLocation>> chemicalStagesIndexView() {
         return chemicalStagesIndex;
+    }
+
+    /**
+     * Snapshot of recipe id → defining stage ids (for recipe viewers and lock checks).
+     */
+    public synchronized Map<ResourceLocation, Set<ResourceLocation>> recipeStagesIndexView() {
+        return recipeStagesIndex;
     }
 
     public synchronized Map<ResourceLocation, StageDefinition> allDefinitions() {
@@ -274,6 +292,25 @@ public final class StageManager extends SimpleJsonResourceReloadListener {
             return false;
         }
         Set<ResourceLocation> defining = chemicalStagesIndex.get(chemicalRegistryKey);
+        if (defining == null || defining.isEmpty()) {
+            return false;
+        }
+        for (ResourceLocation stageId : defining) {
+            if (stages.has(stageId)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * Locked when any stage lists this recipe id and the player has none of those stages.
+     */
+    public synchronized boolean isRecipeLocked(PlayerStages stages, ResourceLocation recipeHolderId) {
+        if (recipeHolderId == null) {
+            return false;
+        }
+        Set<ResourceLocation> defining = recipeStagesIndex.get(recipeHolderId);
         if (defining == null || defining.isEmpty()) {
             return false;
         }

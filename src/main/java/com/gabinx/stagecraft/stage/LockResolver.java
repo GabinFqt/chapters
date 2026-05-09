@@ -39,4 +39,13 @@ public final class LockResolver {
         PlayerStages stages = player.getData(StagecraftRegistries.PLAYER_STAGES.get());
         return StageManager.get().isChemicalLocked(stages, chemicalRegistryKey);
     }
+
+    public static boolean isRecipeLocked(ServerPlayer player, ResourceLocation recipeHolderId) {
+        if (recipeHolderId == null) {
+            return false;
+        }
+
+        PlayerStages stages = player.getData(StagecraftRegistries.PLAYER_STAGES.get());
+        return StageManager.get().isRecipeLocked(stages, recipeHolderId);
+    }
 }

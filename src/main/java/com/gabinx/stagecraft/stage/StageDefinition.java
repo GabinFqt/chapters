@@ -26,7 +26,9 @@ public record StageDefinition(
         Set<String> fluidNamespaces,
         Set<ResourceLocation> chemicals,
         Set<ResourceLocation> chemicalTags,
-        Set<String> chemicalNamespaces) {
+        Set<String> chemicalNamespaces,
+        /** Crafting (and other) recipe holder ids to lock until the player has this stage. */
+        Set<ResourceLocation> recipes) {
 
     public static StageDefinition fromJson(ResourceLocation id, JsonObject json) {
         Set<ResourceLocation> items = new LinkedHashSet<>();
@@ -38,6 +40,7 @@ public record StageDefinition(
         Set<ResourceLocation> chemicals = new LinkedHashSet<>();
         Set<ResourceLocation> chemicalTags = new LinkedHashSet<>();
         Set<String> chemicalNamespaces = new LinkedHashSet<>();
+        Set<ResourceLocation> recipes = new LinkedHashSet<>();
 
         JsonArray namespacesJson = json.getAsJsonArray("namespaces");
         if (namespacesJson != null) {
@@ -107,6 +110,16 @@ public record StageDefinition(
             }
         }
 
+        JsonArray recipeValues = json.getAsJsonArray("recipes");
+        if (recipeValues != null) {
+            for (JsonElement element : recipeValues) {
+                if (!element.isJsonPrimitive()) {
+                    continue;
+                }
+                accumulateRecipeEntry(element.getAsString(), recipes);
+            }
+        }
+
         return new StageDefinition(
                 id,
                 items,
@@ -117,7 +130,8 @@ public record StageDefinition(
                 fluidNamespaces,
                 chemicals,
                 chemicalTags,
-                chemicalNamespaces);
+                chemicalNamespaces,
+                recipes);
     }
 
     /**
@@ -248,6 +262,23 @@ public record StageDefinition(
         }
     }
 
+    /**
+     * One stage-list recipe entry: exact recipe id ({@code minecraft:stick}).
+     */
+    public static void accumulateRecipeEntry(String raw, Set<ResourceLocation> recipesOut) {
+        if (raw == null) {
+            return;
+        }
+        String trimmed = raw.trim();
+        if (trimmed.isEmpty()) {
+            return;
+        }
+        ResourceLocation recipeId = ResourceLocation.tryParse(trimmed);
+        if (recipeId != null) {
+            recipesOut.add(recipeId);
+        }
+    }
+
     public boolean matches(ItemStack stack) {
         ResourceLocation key = BuiltInRegistries.ITEM.getKey(stack.getItem());
         if (items.contains(key)) {
@@ -307,5 +338,6 @@ public record StageDefinition(
         chemicals = Set.copyOf(chemicals);
         chemicalTags = Set.copyOf(chemicalTags);
         chemicalNamespaces = Set.copyOf(chemicalNamespaces);
+        recipes = Set.copyOf(recipes);
     }
 }

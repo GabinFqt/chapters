@@ -1,5 +1,6 @@
 package com.gabinx.stagecraft;
 
+import com.gabinx.stagecraft.network.ClientboundRecipeStageIndexPayload;
 import com.gabinx.stagecraft.network.ClientboundStageDeltaPayload;
 import com.gabinx.stagecraft.network.ClientboundStagesPayload;
 import com.gabinx.stagecraft.stage.PlayerStages;
@@ -36,5 +37,10 @@ public final class StagecraftRegistries {
         PayloadRegistrar registrar = event.registrar("1");
         registrar.playToClient(ClientboundStagesPayload.TYPE, ClientboundStagesPayload.STREAM_CODEC, ClientboundStagesPayload::handle);
         registrar.playToClient(ClientboundStageDeltaPayload.TYPE, ClientboundStageDeltaPayload.STREAM_CODEC, ClientboundStageDeltaPayload::handle);
+        registrar.playToClient(
+                ClientboundRecipeStageIndexPayload.TYPE,
+                ClientboundRecipeStageIndexPayload.STREAM_CODEC,
+                ClientboundRecipeStageIndexPayload::handle
+        );
     }
 }

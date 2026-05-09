@@ -1,5 +1,6 @@
 {
   "commands.stagecraft.craft.blocked": "You cannot craft locked items: %s",
+  "commands.stagecraft.craft.blocked_recipe": "You cannot use this recipe yet: %s",
   "commands.stagecraft.add.success": "Added stage '%s' to %s.",
   "commands.stagecraft.remove.success": "Removed stage '%s' from %s.",
   "commands.stagecraft.list.header": "Stages for %s: %s",

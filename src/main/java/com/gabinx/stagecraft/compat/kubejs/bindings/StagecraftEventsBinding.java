@@ -12,6 +12,7 @@ public final class StagecraftEventsBinding {
      * A leading {@code @} also applies to every fluid and every Mekanism chemical registered under that namespace (same as datapack {@code namespaces}).
      * Optional {@code fluid:} prefix for fluids only ({@code fluid:minecraft:lava}, {@code fluid:#c:water}, {@code fluid:@mod_id}).
      * Optional {@code chemical:} prefix for Mekanism chemicals only ({@code chemical:mekanism:hydrogen}, {@code chemical:#mekanism:gases}, {@code chemical:@mekanism}) when Mekanism is installed.
+     * Optional {@code recipe:} prefix locks a recipe by id only ({@code recipe:minecraft:diamond_pickaxe}); the output item can stay visible if not otherwise locked.
      * <p>
      * Breaking change: use a single collection-form call from KubeJS:
      * {@code defineStage('namespace:stage_id', ['minecraft:apple', '#minecraft:axes'])}.

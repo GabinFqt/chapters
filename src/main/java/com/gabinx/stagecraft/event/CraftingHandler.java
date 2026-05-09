@@ -2,9 +2,17 @@ package com.gabinx.stagecraft.event;
 
 import com.gabinx.stagecraft.stage.LockResolver;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.inventory.CraftingContainer;
+import net.minecraft.world.Container;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.crafting.CraftingRecipe;
+import net.minecraft.world.item.crafting.RecipeHolder;
+import net.minecraft.world.item.crafting.RecipeType;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
+
+import java.util.Optional;
 
 public final class CraftingHandler {
     private CraftingHandler() {
@@ -16,7 +24,11 @@ public final class CraftingHandler {
         }
 
         ItemStack crafted = event.getCrafting();
-        if (crafted.isEmpty() || !LockResolver.isLocked(player, crafted)) {
+        boolean itemLocked = !crafted.isEmpty() && LockResolver.isLocked(player, crafted);
+        boolean recipeLocked =
+                crafted.isEmpty() ? false : isCraftingRecipeLocked(player, event.getInventory(), crafted);
+
+        if (!itemLocked && !recipeLocked) {
             return;
         }
 
@@ -25,10 +37,33 @@ public final class CraftingHandler {
         removeFromInventory(player, crafted, remaining);
         player.containerMenu.broadcastChanges();
 
+        if (recipeLocked && !itemLocked) {
+            player.displayClientMessage(
+                    Component.translatable("commands.stagecraft.craft.blocked_recipe", crafted.getHoverName()),
+                    true
+            );
+            return;
+        }
+
         player.displayClientMessage(
                 Component.translatable("commands.stagecraft.craft.blocked", crafted.getHoverName()),
                 true
         );
+    }
+
+    private static boolean isCraftingRecipeLocked(ServerPlayer player, Container craftMatrix, ItemStack crafted) {
+        if (crafted.isEmpty() || !(craftMatrix instanceof CraftingContainer crafting)) {
+            return false;
+        }
+        if (player.level() == null || player.level().isClientSide) {
+            return false;
+        }
+        Optional<ResourceLocation> recipeId =
+                player.level().getRecipeManager().getRecipeFor(
+                        RecipeType.CRAFTING,
+                        crafting.asCraftInput(),
+                        player.level()).map(RecipeHolder<CraftingRecipe>::id);
+        return recipeId.map(id -> LockResolver.isRecipeLocked(player, id)).orElse(false);
     }
 
     private static int removeFromCarriedStack(ServerPlayer player, ItemStack target, int amount) {

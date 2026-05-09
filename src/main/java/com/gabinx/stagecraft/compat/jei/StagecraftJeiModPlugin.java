@@ -38,7 +38,8 @@ import java.util.Optional;
 import java.util.Set;
 
 /**
- * Hides locked items, fluids, and Mekanism chemicals (and recipes that output them) in JEI once the runtime exists.
+ * Hides locked items, fluids, Mekanism chemicals, locked recipe ids, and recipes that output locked items/fluids/chemicals
+ * in JEI once the runtime exists.
  * Kept in this type so the mod can load without JEI (this class is loaded only when JEI scans for {@link JeiPlugin}).
  */
 @JeiPlugin
@@ -51,6 +52,7 @@ public final class StagecraftJeiModPlugin implements IModPlugin {
     private static final Set<ResourceLocation> lastLockedItems = new LinkedHashSet<>();
     private static final Set<ResourceLocation> lastLockedFluids = new LinkedHashSet<>();
     private static final Set<ResourceLocation> lastLockedChemicals = new LinkedHashSet<>();
+    private static final Set<ResourceLocation> lastLockedRecipes = new LinkedHashSet<>();
 
     /** Item id → ingredient stacks removed from JEI so we can add them back verbatim. */
     private static final Map<ResourceLocation, List<ItemStack>> ingredientSnapshots = new HashMap<>();
@@ -68,12 +70,15 @@ public final class StagecraftJeiModPlugin implements IModPlugin {
 
     private static final Map<ResourceLocation, List<HiddenRecipe>> recipesByLockingChemical = new HashMap<>();
 
+    private static final Map<ResourceLocation, List<HiddenRecipe>> recipesByLockingRecipeId = new HashMap<>();
+
     private static final Map<HiddenRecipe, Integer> recipeHideRefCount = new HashMap<>();
 
     static void applyLocked(
             Set<ResourceLocation> newLockedItems,
             Set<ResourceLocation> newLockedFluids,
-            Set<ResourceLocation> newLockedChemicals
+            Set<ResourceLocation> newLockedChemicals,
+            Set<ResourceLocation> newLockedRecipes
     ) {
         synchronized (LOCK) {
             if (runtime == null) {
@@ -153,7 +158,63 @@ public final class StagecraftJeiModPlugin implements IModPlugin {
 
             lastLockedChemicals.clear();
             lastLockedChemicals.addAll(newLockedChemicals);
+
+            Set<ResourceLocation> recipesToLock = new LinkedHashSet<>(newLockedRecipes);
+            recipesToLock.removeAll(lastLockedRecipes);
+            Set<ResourceLocation> recipesToUnlock = new LinkedHashSet<>(lastLockedRecipes);
+            recipesToUnlock.removeAll(newLockedRecipes);
+
+            for (ResourceLocation id : recipesToUnlock) {
+                revealRecipesForRecipeId(recipeManager, id);
+            }
+            hideRecipesWithIds(jei, recipeManager, recipesToLock);
+
+            lastLockedRecipes.clear();
+            lastLockedRecipes.addAll(newLockedRecipes);
         }
+    }
+
+    private static void hideRecipesWithIds(
+            IJeiRuntime jei,
+            IRecipeManager recipeManager,
+            Set<ResourceLocation> idsToLock
+    ) {
+        if (idsToLock.isEmpty()) {
+            return;
+        }
+        Map<ResourceLocation, List<HiddenRecipe>> contributedById = new LinkedHashMap<>();
+        for (ResourceLocation id : idsToLock) {
+            contributedById.put(id, new ArrayList<>());
+        }
+        for (RecipeType<?> recipeType : jei.getJeiHelpers().getAllRecipeTypes().toList()) {
+            IRecipeLookup<?> lookup = recipeManager.createRecipeLookup(recipeType);
+            for (Object recipe : lookup.get().toList()) {
+                if (!(recipe instanceof RecipeHolder<?> holder)) {
+                    continue;
+                }
+                ResourceLocation hid = holder.id();
+                if (!idsToLock.contains(hid)) {
+                    continue;
+                }
+                HiddenRecipe hr = new HiddenRecipe(recipeType, recipe);
+                contributedById.get(hid).add(hr);
+                int refs = recipeHideRefCount.merge(hr, 1, Integer::sum);
+                if (refs == 1) {
+                    hideRecipesUnchecked(recipeManager, recipeType, List.of(recipe));
+                }
+            }
+        }
+        for (ResourceLocation rid : idsToLock) {
+            List<HiddenRecipe> contribution = contributedById.get(rid);
+            if (contribution != null && !contribution.isEmpty()) {
+                recipesByLockingRecipeId.put(rid, List.copyOf(contribution));
+            }
+        }
+    }
+
+    private static void revealRecipesForRecipeId(IRecipeManager recipeManager, ResourceLocation recipeId) {
+        List<HiddenRecipe> contributed = recipesByLockingRecipeId.remove(recipeId);
+        revealContributedRecipes(recipeManager, contributed);
     }
 
     private static void restoreItemIngredients(IIngredientManager ingredients, ResourceLocation itemId) {
@@ -597,12 +658,14 @@ public final class StagecraftJeiModPlugin implements IModPlugin {
             lastLockedItems.clear();
             lastLockedFluids.clear();
             lastLockedChemicals.clear();
+            lastLockedRecipes.clear();
             ingredientSnapshots.clear();
             fluidIngredientSnapshots.clear();
             chemicalIngredientSnapshots.clear();
             recipesByLockingItem.clear();
             recipesByLockingFluid.clear();
             recipesByLockingChemical.clear();
+            recipesByLockingRecipeId.clear();
             recipeHideRefCount.clear();
         }
     }

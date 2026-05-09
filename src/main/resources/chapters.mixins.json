@@ -1,0 +1,16 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "com.gabinx.chapters.mixin",
+  "plugin": "com.gabinx.chapters.mixin.ChaptersMixinPlugin",
+  "compatibilityLevel": "JAVA_21",
+  "mixins": [
+    "AbstractContainerMenuMixin",
+    "CraftingMenuMixin",
+    "FluidUtilMixin",
+    "compat.mekanism.ChemicalUtilsMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

@@ -1,6 +1,6 @@
-# Stagecraft (NeoForge 1.21.1)
+# Chapters (NeoForge 1.21.1)
 
-Stagecraft is a progression mod inspired by GameStages + ItemStages.
+Chapters is a progression mod inspired by GameStages + ItemStages.
 
 It lets you:
 - lock items behind named stages
@@ -14,27 +14,27 @@ It lets you:
 
 ## Commands
 
-- `/stagecraft add <player> <stage>`
-- `/stagecraft remove <player> <stage>`
-- `/stagecraft list <player>`
-- `/stagecraft check <player> <stage>`
-- `/stagecraft reload`
+- `/chapters add <player> <stage>`
+- `/chapters remove <player> <stage>`
+- `/chapters list <player>`
+- `/chapters check <player> <stage>`
+- `/chapters reload`
 
 ## Quick test (in-game)
 
-The jar does **not** ship preset stages: add your own JSON under [`Datapack stages`](#datapack-stages), or copy [`examples/kubejs/`](examples/kubejs/) into your instance’s `kubejs/` folder (it registers `stagecraft:script_pickups` and related runtime stages).
+The jar does **not** ship preset stages: add your own JSON under [`Datapack stages`](#datapack-stages), or copy [`examples/kubejs/`](examples/kubejs/) into your instance’s `kubejs/` folder (it registers `chapters:script_pickups` and related runtime stages).
 
-With a datapack stage id like `myproject:tutorial` (file `data/myproject/stagecraft/stages/tutorial.json`):
+With a datapack stage id like `myproject:tutorial` (file `data/myproject/chapters/stages/tutorial.json`):
 
 1. `/reload`
-2. `/stagecraft check Dev/myproject:tutorial`
-3. `/give Dev minecraft:netherite_ingot 1` (if that item is gated in your JSON) → should be blocked until you `/stagecraft add Dev myproject:tutorial`
+2. `/chapters check Dev/myproject:tutorial`
+3. `/give Dev minecraft:netherite_ingot 1` (if that item is gated in your JSON) → should be blocked until you `/chapters add Dev myproject:tutorial`
 
 ## Datapack stages
 
 Put JSON files at:
 
-`data/<namespace>/stagecraft/stages/<stage_id>.json`
+`data/<namespace>/chapters/stages/<stage_id>.json`
 
 Example:
 
@@ -75,9 +75,9 @@ Rules:
 
 ## KubeJS integration
 
-Stagecraft registers a KubeJS plugin and bindings:
+Chapters registers a KubeJS plugin and bindings:
 
-- `StagecraftEvents.defineStage(stageId, entries)` — `entries` must be a JS list (array) of item-style strings (`@mod` also locks that mod’s fluids and Mekanism chemicals), plus `fluid:…`, `chemical:…`, and `recipe:…` (holder id) overrides in the same list. Definitions are applied **once per server tick** after your script runs so many `defineStage` calls in one `ServerEvents.loaded` callback batch into a single reload (indices are rebuilt once).
+- `ChaptersEvents.defineStage(stageId, entries)` — `entries` must be a JS list (array) of item-style strings (`@mod` also locks that mod’s fluids and Mekanism chemicals), plus `fluid:…`, `chemical:…`, and `recipe:…` (holder id) overrides in the same list. Definitions are applied **once per server tick** after your script runs so many `defineStage` calls in one `ServerEvents.loaded` callback batch into a single reload (indices are rebuilt once).
 - `PlayerStages.of(player).add(stageId)`
 - `PlayerStages.of(player).remove(stageId)`
 - `PlayerStages.of(player).has(stageId)`
@@ -87,7 +87,7 @@ Example script:
 
 ```js
 ServerEvents.loaded(event => {
-  StagecraftEvents.defineStage(
+  ChaptersEvents.defineStage(
     'mypack:tier1',
     [
       'minecraft:netherite_ingot',
@@ -105,7 +105,7 @@ ServerEvents.commandRegistry(event => {
 
 ## Recipe viewer (JEI)
 
-Stagecraft integrates optionally with **JEI**: when client stage payloads arrive, locked item / fluid / Mekanism chemical ids and locked **recipe ids** are recomputed: ingredients are hidden, output-focused recipes are hidden where applicable (Mekanism chemicals use `TYPE_CHEMICAL` when both mods are present), and recipes matching a locked id are hidden across JEI recipe types, with unlock reconciliation via `includeHidden()` on focus lookups.
+Chapters integrates optionally with **JEI**: when client stage payloads arrive, locked item / fluid / Mekanism chemical ids and locked **recipe ids** are recomputed: ingredients are hidden, output-focused recipes are hidden where applicable (Mekanism chemicals use `TYPE_CHEMICAL` when both mods are present), and recipes matching a locked id are hidden across JEI recipe types, with unlock reconciliation via `includeHidden()` on focus lookups.
 
 ## Development
 

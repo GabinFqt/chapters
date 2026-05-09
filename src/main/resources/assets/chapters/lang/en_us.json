@@ -1,0 +1,11 @@
+{
+  "commands.chapters.craft.blocked": "You cannot craft locked items: %s",
+  "commands.chapters.craft.blocked_recipe": "You cannot use this recipe yet: %s",
+  "commands.chapters.add.success": "Added stage '%s' to %s.",
+  "commands.chapters.remove.success": "Removed stage '%s' from %s.",
+  "commands.chapters.list.header": "Stages for %s: %s",
+  "commands.chapters.check.true": "%s has stage '%s'.",
+  "commands.chapters.check.false": "%s does not have stage '%s'.",
+  "commands.chapters.reload.success": "Reloaded Chapters stage definitions.",
+  "commands.chapters.error.unknown_stage": "Unknown stage: %s"
+}

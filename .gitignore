@@ -19,3 +19,8 @@ net/
 .DS_Store
 *.class
 *.log
+
+# Secrets — publishing tokens (see .env.example)
+.env
+.env.*
+!.env.example

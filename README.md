@@ -123,7 +123,27 @@ Example KubeJS scripts for local testing live under [`examples/kubejs/`](example
 
 ## Releases
 
-Tag source releases as `v0.1.0`, `v0.2.0`, … matching `mod_version` in [`gradle.properties`](gradle.properties). Attach the built jar from `build/libs/` (after `./gradlew build`) to the GitHub Release.
+Tag source releases as `v1.0`, `v1.1`, … matching `mod_version` in [`gradle.properties`](gradle.properties). Attach the built jar from `build/libs/` (after `./gradlew build`) to the GitHub Release.
+
+### Publishing to Modrinth and CurseForge
+
+Publishing is wired through the [`mod-publish-plugin`](https://modmuss50.github.io/mod-publish-plugin/). One-time setup:
+
+1. Create the projects on [Modrinth](https://modrinth.com/dashboard/projects) and [CurseForge](https://authors.curseforge.com) (CurseForge requires manual approval before the first publish).
+2. Fill in the project ids in [`gradle.properties`](gradle.properties):
+   - `modrinth_project_id` (slug or id, e.g. `chapters`)
+   - `curseforge_project_id` (numeric id from the project's URL)
+3. Generate API tokens:
+   - Modrinth: [Personal access tokens](https://modrinth.com/settings/pats) — scope `Create versions`
+   - CurseForge: [API tokens](https://legacy.curseforge.com/account/api-tokens)
+4. Update [`CHANGELOG.md`](CHANGELOG.md) (its full content becomes the release notes on both platforms).
+5. Tokens are loaded from a gitignored [`.env`](.env.example) at the repo root (see [`.env.example`](.env.example) for the variables). Bump `mod_version` in [`gradle.properties`](gradle.properties), then publish:
+
+```bash
+set -a && source .env && set +a && ./gradlew publishMods
+```
+
+The task uploads the jar built from `tasks.jar` to every platform that has a project id configured (platforms with an empty id are silently skipped).
 
 ## License
 

@@ -1,6 +1,7 @@
 plugins {
     java
     id("net.neoforged.moddev") version "2.0.74"
+    id("me.modmuss50.mod-publish-plugin") version "1.1.0"
 }
 
 group = property("mod_group_id")!!
@@ -91,5 +92,43 @@ tasks.withType<ProcessResources>().configureEach {
     inputs.properties(properties)
     filesMatching("META-INF/neoforge.mods.toml") {
         expand(properties)
+    }
+}
+
+publishMods {
+    file = tasks.jar.flatMap { it.archiveFile }
+    type = STABLE
+    modLoaders.add("neoforge")
+    displayName = "${property("mod_name")} ${property("mod_version")}"
+
+    val changelogFile = rootProject.file("CHANGELOG.md")
+    changelog = if (changelogFile.exists()) {
+        changelogFile.readText()
+    } else {
+        "Release ${property("mod_version")}"
+    }
+
+    val modrinthProjectId = findProperty("modrinth_project_id")?.toString()?.takeIf { it.isNotBlank() }
+    if (modrinthProjectId != null) {
+        modrinth {
+            accessToken = providers.environmentVariable("MODRINTH_TOKEN")
+            projectId = modrinthProjectId
+            minecraftVersions.add(property("minecraft_version").toString())
+            optional { slug = "jei" }
+            optional { slug = "kubejs" }
+            optional { slug = "mekanism" }
+        }
+    }
+
+    val curseforgeProjectId = findProperty("curseforge_project_id")?.toString()?.takeIf { it.isNotBlank() }
+    if (curseforgeProjectId != null) {
+        curseforge {
+            accessToken = providers.environmentVariable("CURSEFORGE_TOKEN")
+            projectId = curseforgeProjectId
+            minecraftVersions.add(property("minecraft_version").toString())
+            optional { slug = "jei" }
+            optional { slug = "kubejs" }
+            optional { slug = "mekanism" }
+        }
     }
 }

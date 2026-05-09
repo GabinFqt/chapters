@@ -72,7 +72,7 @@ Rules:
 
 Stagecraft registers a KubeJS plugin and bindings:
 
-- `StagecraftEvents.defineStage(stageId, ...entries)` — item-style strings (`@mod` also locks that mod’s fluids and Mekanism chemicals), plus `fluid:…` and `chemical:…` overrides in the same call. Definitions are applied **once per server tick** after your script runs so many `defineStage` calls in one `ServerEvents.loaded` callback batch into a single reload (indices are rebuilt once).
+- `StagecraftEvents.defineStage(stageId, entries)` — `entries` must be a JS list (array) of item-style strings (`@mod` also locks that mod’s fluids and Mekanism chemicals), plus `fluid:…` and `chemical:…` overrides in the same list. Definitions are applied **once per server tick** after your script runs so many `defineStage` calls in one `ServerEvents.loaded` callback batch into a single reload (indices are rebuilt once).
 - `PlayerStages.of(player).add(stageId)`
 - `PlayerStages.of(player).remove(stageId)`
 - `PlayerStages.of(player).has(stageId)`
@@ -84,8 +84,10 @@ Example script:
 ServerEvents.loaded(event => {
   StagecraftEvents.defineStage(
     'mypack:tier1',
-    'minecraft:netherite_ingot',
-    '#minecraft:swords'
+    [
+      'minecraft:netherite_ingot',
+      '#minecraft:swords'
+    ]
   )
 })
 

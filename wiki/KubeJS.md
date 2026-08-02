@@ -1,14 +1,14 @@
 # KubeJS
 
-Install **KubeJS** alongside **Chapters**. There is no separate Chapters config file — the script API is registered when both mods load.
+Install **KubeJS** alongside **Chapters**. There is no separate Chapters config file: the script API is registered when both mods load.
 
 ## `ChaptersEvents.defineStage(stageId, entries)`
 
-- **`stageId`** — string like `"mypack:tier2"`.
-- **`entries`** — array of strings. Same ideas as datapack lists, but **prefixes** make each line unambiguous:
+- **`stageId`**: string like `"mypack:tier2"`.
+- **`entries`**: array of strings. Same ideas as datapack lists, but **prefixes** make each line unambiguous:
   - item: `"minecraft:diamond"`, `"#minecraft:swords"`, `"@create"`
   - fluid: `"fluid:minecraft:lava"`
-  - Mekanism chemical: `"chemical:mekanism:hydrogen"`
+  - Mekanism chemical: `"chemical:mekanism:hydrogen"` (indexed only when Mekanism compat is active; on Minecraft **26** / Chapters **2.x** chemical gating is off until Mekanism ships)
   - recipe: `"recipe:minecraft:diamond_pickaxe"`
 
 Many `defineStage` calls in the **same server tick** are batched internally so indexing stays fast after load.
@@ -31,7 +31,7 @@ ServerEvents.loaded((event) => {
 
 ## `PlayerStages.of(player)`
 
-Typical methods you’ll wire to quests / commands / advancements:
+Typical methods you wire to quests / commands / advancements:
 
 | Method | Use |
 | --- | --- |
@@ -54,4 +54,9 @@ if (PlayerStages.of(player).has('mypack:tier2')) {
 
 ## Starter script file
 
-[**examples/kubejs/server_scripts/main.js**](https://github.com/GabinFqt/chapters/blob/main/examples/kubejs/server_scripts/main.js) on GitHub mirrors the kind of setups in [[Examples]]. Copy those lines into **`kubejs/server_scripts/`** in your instance while you iterate.
+Copy into **`kubejs/server_scripts/`** while you iterate:
+
+- Minecraft **26**: [examples/kubejs on `26`](https://github.com/GabinFqt/chapters/tree/26/examples/kubejs)
+- Minecraft **1.21**: [examples/kubejs on `main`](https://github.com/GabinFqt/chapters/tree/main/examples/kubejs)
+
+See also [[Examples]].

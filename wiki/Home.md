@@ -1,6 +1,11 @@
-**Chapters** is a progression mod for **NeoForge 26.1.2** (requires **Java 25**). You gate **items, fluids, Mekanism chemicals**, and **recipes by id** behind named *stages* using **datapacks** and optionally **KubeJS**, with optional **JEI** integration so players see what they can actually use.
+**Chapters** is a progression mod for NeoForge. You gate **items, fluids, Mekanism chemicals**, and **recipes by id** behind named *chapters* (stages) using **datapacks** and optionally **KubeJS**, with optional **JEI** so players only see what they can use.
 
-- **[Download releases](https://github.com/GabinFqt/chapters/releases)** (jar for your mods folder)
+| Minecraft | Chapters jar | Java |
+| --- | --- | --- |
+| **1.21** (NeoForge 21.1) | **1.x** | 21 |
+| **26** (NeoForge 26.1) | **2.x** | 25 |
+
+- **[Download releases](https://github.com/GabinFqt/chapters/releases)** (pick the jar for your Minecraft version)
 - **Something wrong or missing from the wiki?** [Open an issue](https://github.com/GabinFqt/chapters/issues)
 
 ## Commands (quick reference)
@@ -17,10 +22,10 @@ All require permission level as usual for multiplayer.
 
 ## Getting started as a pack author
 
-1. Define stages in **datapack JSON** under `data/<namespace>/chapters/stages/` **and/or** with **KubeJS** — see [[Stages-datapack]] and [[KubeJS]].
+1. Define stages in **datapack JSON** under `data/<namespace>/chapters/stages/` and/or with **KubeJS**. See [[Stages-datapack]] and [[KubeJS]].
 2. Run **`/reload`** after changing datapacks (operator).
 3. KubeJS: stage definitions typically apply on **`ServerEvents.loaded`**; reloading behaviour follows your usual KubeJS/server restart habits.
-4. Grant progression with **`/chapters add`** or from your own **`PlayerStages.of(player).add(...)`** logic tied to quests, advancements, etc. — [[Examples]] for patterns.
+4. Grant progression with **`/chapters add`** or **`PlayerStages.of(player).add(...)`** from quests, advancements, etc. See [[Examples]].
 
 ## Wiki pages
 
@@ -31,8 +36,13 @@ All require permission level as usual for multiplayer.
 | [[Examples]] | Copy-paste setups (tiers, fluids, recipes, Mekanism) |
 | [[FTB-integration]] | FTB Library / FTB Teams / FTB Quests (Stage Reward, team-wide unlocks) |
 | [[JEI-and-limitations]] | What JEI hides and what crafting is blocked |
-| [[Troubleshooting]] | datapack not applying, conflicting stages, JEI quirks |
+| [[Troubleshooting]] | datapack not applying, conflicting stages, JEI quirks, KubeJS crash |
 
 ### Sample packs
 
-You can copy a **tutorial datapack** and **KubeJS snippets** straight from **[this folder on GitHub](https://github.com/GabinFqt/chapters/tree/main/examples)** (`examples/datapack/tutorial`, `examples/kubejs`). No need to build the mod yourself — grab the jar from Releases and paste the samples into your world or modpack workspace.
+Copy a **tutorial datapack** and **KubeJS snippets** from GitHub:
+
+- Minecraft **26**: [examples on branch `26`](https://github.com/GabinFqt/chapters/tree/26/examples)
+- Minecraft **1.21**: [examples on `main`](https://github.com/GabinFqt/chapters/tree/main/examples)
+
+Grab the matching jar from Releases, then paste the samples into your world or modpack workspace.

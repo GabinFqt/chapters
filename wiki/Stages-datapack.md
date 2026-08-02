@@ -24,8 +24,8 @@ Anything you don’t need can be omitted.
 | --- | --- |
 | `items` | Item ids (`minecraft:diamond`), item tags (**`#`**`minecraft:swords`), or an entire mod’s items (**`@`**`modid`). For **`@`** mod prefixes, fluids and Mekanism chemicals from that mod are also gated unless you only add extras via `fluid_namespaces` / `chemical_namespaces`. |
 | `fluids` | Fluid ids, **`#`** fluid tags, or **`@`** every fluid from a mod |
-| `chemicals` | Mekanism-only: chemical ids/tags/**`@`**mods. Harmless JSON if Mekanism is not installed. |
-| `recipes` | Recipe **registry ids**: `minecraft:diamond_pickaxe` (no **`#`** / **`@`**). Locks that recipe **on the vanilla crafting grid** when the player lacks a matching stage plus other rules — see [[JEI-and-limitations]]. |
+| `chemicals` | Mekanism-only: chemical ids/tags/**`@`**mods. Harmless JSON if Mekanism is not installed. On **Minecraft 26**, chemical gating in Chapters **2.x** is compiled out until a Mekanism 26 build exists. |
+| `recipes` | Recipe **registry ids**: `minecraft:diamond_pickaxe` (no **`#`** / **`@`**). Locks that recipe **on the vanilla crafting grid** when the player lacks a matching stage. See [[JEI-and-limitations]]. |
 | `namespaces` | List of mod ids; same broad effect as adding **`@`** for items **and** fluids **and** chemicals for each |
 | `fluid_namespaces` | Extra mod ids that only add fluid locks |
 | `chemical_namespaces` | Extra mod ids that only add chemical locks |
@@ -69,6 +69,9 @@ If **different** stage JSON files (or KubeJS `defineStage` calls) all mention th
 
 ## Template datapack to copy
 
-A working **`pack.mcmeta`** plus several example stages lives here (copy the whole `tutorial` folder into `saves/<your world>/datapacks/`):
+A working **`pack.mcmeta`** plus several example stages:
 
-**[examples/datapack/tutorial on GitHub](https://github.com/GabinFqt/chapters/tree/main/examples/datapack/tutorial)**
+- Minecraft **26**: [examples/datapack/tutorial on `26`](https://github.com/GabinFqt/chapters/tree/26/examples/datapack/tutorial)
+- Minecraft **1.21**: [examples/datapack/tutorial on `main`](https://github.com/GabinFqt/chapters/tree/main/examples/datapack/tutorial)
+
+Copy the whole `tutorial` folder into `saves/<your world>/datapacks/`.

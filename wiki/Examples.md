@@ -1,14 +1,17 @@
 # Examples
 
-For **NeoForge 26.1.2** + **Chapters**. Pick namespaces to match **your** pack (`mypack`, etc.). **`/reload`** after datapack changes; grant stages with **`/chapters add <player> namespace:stage`**.
+Works with **Chapters** on **Minecraft 1.21** and **26**. Pick namespaces to match **your** pack (`mypack`, etc.). **`/reload`** after datapack changes; grant stages with **`/chapters add <player> namespace:stage`**.
 
-[**Tutorial datapack (real files)**](https://github.com/GabinFqt/chapters/tree/main/examples/datapack/tutorial) — same filenames as snippets below where noted.
+Tutorial datapack (real files):
+
+- [on branch `26`](https://github.com/GabinFqt/chapters/tree/26/examples/datapack/tutorial)
+- [on `main`](https://github.com/GabinFqt/chapters/tree/main/examples/datapack/tutorial)
 
 ---
 
-## 1 — One item behind a stage
+## 1. One item behind a stage
 
-**Datapack** — `data/tutorial/chapters/stages/intro_nether.json`:
+**Datapack** (`data/tutorial/chapters/stages/intro_nether.json`):
 
 ```json
 {
@@ -28,9 +31,9 @@ ServerEvents.loaded(() => {
 
 ---
 
-## 2 — Three tiers (combine multiple stages)
+## 2. Three tiers (combine multiple stages)
 
-**Datapack** — three separate files:
+**Datapack** :  three separate files:
 
 `data/tutorial/chapters/stages/tier_early.json`
 
@@ -64,12 +67,12 @@ ServerEvents.loaded(() => {
 
 ---
 
-## 3 — Tag vs entire mod
+## 3. Tag vs entire mod
 
 | Goal | In `items` |
 | --- | --- |
 | All vanilla swords tag | `"#minecraft:swords"` |
-| Broad lock for **Create** (items + related fluid/chem rules for `@` — see [[Stages-datapack]]) | `"@create"` |
+| Broad lock for **Create** (items + related fluid/chem rules for `@`. See [[Stages-datapack]]) | `"@create"` |
 
 **Datapack:**
 
@@ -89,9 +92,9 @@ Tighter fluid-only or chemical-only extras: use `fluid_namespaces` / `chemical_n
 
 ---
 
-## 4 — Water and lava
+## 4. Water and lava
 
-**Datapack** — `data/tutorial/chapters/stages/fluides_base.json` → stage **`tutorial:fluides_base`**
+**Datapack** (`data/tutorial/chapters/stages/fluides_base.json` → stage **`tutorial:fluides_base`**)
 
 ```json
 {
@@ -113,7 +116,7 @@ ChaptersEvents.defineStage('tutorial:fluides_base', [
 
 ---
 
-## 5 — Lock one recipe
+## 5. Lock one recipe
 
 Vanilla grid behaviour + JEI: see [[JEI-and-limitations]].
 
@@ -135,9 +138,9 @@ ChaptersEvents.defineStage('tutorial:recipe_pickaxe', [
 
 ---
 
-## 6 — Mekanism hydrogen (optional)
+## 6. Mekanism hydrogen (optional)
 
-No Mekanism → lines are accepted but **no chemicals** are indexed.
+No Mekanism → lines are accepted but **no chemicals** are indexed. On **Minecraft 26** (Chapters **2.x**), chemical gating is not active until Mekanism ships a matching build.
 
 **Datapack:**
 
@@ -153,10 +156,13 @@ No Mekanism → lines are accepted but **no chemicals** are indexed.
 ChaptersEvents.defineStage('tutorial:mek_h2', ['chemical:mekanism:hydrogen'])
 ```
 
-Fully automated Mekanism pipe transfers can behave differently from transfers you do manually in GUIs — factor that into hardcore packs.
+Fully automated Mekanism pipe transfers can behave differently from transfers you do manually in GUIs. Factor that into hardcore packs.
 
 ---
 
 ## Try it locally
 
-Paste [**examples/kubejs/server_scripts/main.js**](https://github.com/GabinFqt/chapters/blob/main/examples/kubejs/server_scripts/main.js) into **`kubejs/server_scripts/`** for a louder default sandbox ([**examples readme**](https://github.com/GabinFqt/chapters/tree/main/examples)).
+Paste an examples `server_scripts` file into **`kubejs/server_scripts/`**:
+
+- [branch `26`](https://github.com/GabinFqt/chapters/tree/26/examples/kubejs)
+- [`main`](https://github.com/GabinFqt/chapters/tree/main/examples/kubejs)

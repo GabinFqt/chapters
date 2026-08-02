@@ -2,13 +2,13 @@
 
 ## What JEI does when it is installed
 
-Chapters pushes your chapter state to your client so **JEI listings match “what this player may use now”**:
+Chapters pushes your chapter state to your client so **JEI listings match what this player may use now**:
 
 - Ingredients and outputs tied to locked content are hidden where appropriate.
 - Any recipe whose **id** you locked is hidden in JEI for that player as well.
 - When you unlock a stage, listings catch up automatically.
 
-If JEI is not installed, progression still works server-side — you just don’t get the filtered recipe viewer.
+If JEI is not installed, progression still works server-side; you just don’t get the filtered recipe viewer.
 
 ---
 
@@ -22,7 +22,9 @@ Other stations (**smithing, mod machines**, etc.) **are not guarded the same way
 
 ## Mekanism + JEI
 
-With **JEI**, **Chapters**, and **Mekanism** together, Mekanism chemical-heavy recipes are wired into hiding logic so JEI doesn’t spotlight locked chemistry prematurely.
+With **JEI**, **Chapters**, and **Mekanism** together (when chemical compat is active), Mekanism chemical-heavy recipes are wired into hiding logic so JEI doesn’t spotlight locked chemistry prematurely.
+
+On **Minecraft 26** (Chapters **2.x**), chemical gating is not compiled in yet until Mekanism has a matching release. Item / fluid / recipe locks still apply.
 
 ---
 

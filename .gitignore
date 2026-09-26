@@ -8,6 +8,10 @@ out/
 .idea/
 *.iml
 .vscode/
+.classpath
+.project
+.settings/
+.factorypath
 
 # Minecraft / NeoForge dev environment
 run/

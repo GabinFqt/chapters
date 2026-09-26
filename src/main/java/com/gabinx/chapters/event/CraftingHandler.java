@@ -1,5 +1,6 @@
 package com.gabinx.chapters.event;
 
+import com.gabinx.chapters.logic.CraftGate;
 import com.gabinx.chapters.stage.LockResolver;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
@@ -28,7 +29,7 @@ public final class CraftingHandler {
         boolean recipeLocked =
                 crafted.isEmpty() ? false : isCraftingRecipeLocked(player, event.getInventory(), crafted);
 
-        if (!itemLocked && !recipeLocked) {
+        if (!CraftGate.shouldBlock(itemLocked, recipeLocked)) {
             return;
         }
 

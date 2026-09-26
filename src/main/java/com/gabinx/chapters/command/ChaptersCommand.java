@@ -5,6 +5,7 @@ import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType;
 import com.mojang.brigadier.suggestion.SuggestionProvider;
 import com.gabinx.chapters.api.ChaptersAPI;
+import com.gabinx.chapters.logic.StageCommandActions;
 import com.gabinx.chapters.stage.StageManager;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.SharedSuggestionProvider;
@@ -104,7 +105,8 @@ public final class ChaptersCommand {
     }
 
     private static void validateStage(ResourceLocation stage) throws CommandSyntaxException {
-        if (!StageManager.get().stageIds().contains(stage)) {
+        StageCommandActions.Outcome outcome = StageCommandActions.requireKnown(StageManager.get().stageIds(), stage);
+        if (outcome instanceof StageCommandActions.Outcome.UnknownStage) {
             throw new SimpleCommandExceptionType(
                     Component.translatable("commands.chapters.error.unknown_stage", stage.toString())
             ).create();

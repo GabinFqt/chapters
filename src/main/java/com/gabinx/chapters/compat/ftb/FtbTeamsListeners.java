@@ -4,6 +4,7 @@ import com.gabinx.chapters.Chapters;
 import com.gabinx.chapters.ChaptersRegistries;
 import com.gabinx.chapters.api.ChaptersAPI;
 import com.gabinx.chapters.event.InventoryAuditor;
+import com.gabinx.chapters.logic.StageAccounts;
 import com.gabinx.chapters.stage.PlayerStages;
 import dev.ftb.mods.ftbteams.api.FTBTeamsAPI;
 import dev.ftb.mods.ftbteams.api.Team;
@@ -70,13 +71,10 @@ final class FtbTeamsListeners {
         }
 
         Team team = event.getTeam();
-        if (team == null || team.isClientTeam() || team.isPartyTeam()) {
-            ChaptersAPI.syncAll(player);
-            return;
-        }
-
         PlayerStages legacy = player.getData(ChaptersRegistries.PLAYER_STAGES.get());
-        if (legacy.view().isEmpty()) {
+        boolean isParty = team != null && !team.isClientTeam() && team.isPartyTeam();
+        if (team == null || team.isClientTeam()
+                || !StageAccounts.shouldMigrateLegacy(isParty, legacy.view().isEmpty())) {
             ChaptersAPI.syncAll(player);
             return;
         }

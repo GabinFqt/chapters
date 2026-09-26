@@ -1,31 +1,27 @@
 package com.gabinx.chapters.stage;
 
+import com.gabinx.chapters.logic.ClientStageView;
 import net.minecraft.resources.ResourceLocation;
 
-import java.util.Collections;
-import java.util.LinkedHashSet;
 import java.util.Set;
 
 public final class ClientStageCache {
-    private static final Set<ResourceLocation> STAGES = new LinkedHashSet<>();
-
     private ClientStageCache() {
     }
 
     public static synchronized void set(Set<ResourceLocation> stages) {
-        STAGES.clear();
-        STAGES.addAll(stages);
+        ClientStageMirror.VIEW.setStages(stages);
     }
 
     public static synchronized void add(ResourceLocation stage) {
-        STAGES.add(stage);
+        ClientStageMirror.VIEW.addStage(stage);
     }
 
     public static synchronized void remove(ResourceLocation stage) {
-        STAGES.remove(stage);
+        ClientStageMirror.VIEW.removeStage(stage);
     }
 
     public static synchronized Set<ResourceLocation> snapshot() {
-        return Collections.unmodifiableSet(new LinkedHashSet<>(STAGES));
+        return ClientStageMirror.VIEW.snapshotStages();
     }
 }

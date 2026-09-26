@@ -3,6 +3,7 @@ import java.nio.file.Path
 
 plugins {
     java
+    eclipse
     id("net.neoforged.moddev") version "2.0.74"
     id("me.modmuss50.mod-publish-plugin") version "1.1.0"
 }
@@ -30,6 +31,7 @@ repositories {
     maven("https://maven.blamejared.com") {
         content {
             includeGroup("mezz.jei")
+            includeGroup("net.mezzdev.config")
         }
     }
     maven("https://jitpack.io") {
@@ -68,6 +70,13 @@ neoForge {
         }
     }
 
+    unitTest {
+        enable()
+        testedMod = mods.getByName(property("mod_id").toString())
+        // Logic unit tests do not need JEI / KubeJS / FTB on the classpath at runtime.
+        loadedMods.set(setOf(mods.getByName(property("mod_id").toString())))
+    }
+
     runs {
         create("client") {
             client()
@@ -81,6 +90,22 @@ neoForge {
         create("server") {
             server()
         }
+    }
+}
+
+tasks.test {
+    useJUnitPlatform()
+}
+
+// Optional runtime mods stay available for runClient/runServer, but unit tests only need Chapters.
+listOf("testRuntimeClasspath", "testCompileClasspath").forEach { configName ->
+    configurations.named(configName).configure {
+        exclude(group = "mezz.jei")
+        exclude(group = "net.mezzdev.config")
+        exclude(group = "dev.latvian.mods")
+        exclude(group = "dev.ftb.mods")
+        exclude(group = "dev.architectury")
+        exclude(group = "mekanism")
     }
 }
 
@@ -129,6 +154,12 @@ tasks.matching { it.name == "runClient" || it.name == "runClientBob" || it.name 
     .configureEach { dependsOn(linkKubejs) }
 
 dependencies {
+    testImplementation(platform("org.junit:junit-bom:5.14.1"))
+    testImplementation("org.junit.jupiter:junit-jupiter:5.14.1")
+    testImplementation("org.junit.jupiter:junit-jupiter-api:5.14.1")
+    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.14.1")
+    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+
     compileOnly("dev.latvian.mods:kubejs-neoforge:${property("kubejs_version")}")
     runtimeOnly("dev.latvian.mods:kubejs-neoforge:${property("kubejs_version")}")
     runtimeOnly("dev.latvian.mods:rhino:${property("rhino_version")}")

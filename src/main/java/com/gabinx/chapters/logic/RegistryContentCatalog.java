@@ -3,13 +3,18 @@ package com.gabinx.chapters.logic;
 import com.gabinx.chapters.compat.mekanism.MekanismChemicalIndex;
 import net.minecraft.core.Holder;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.dimension.LevelStem;
 import net.minecraft.world.level.material.Fluid;
 import net.minecraft.world.level.material.Fluids;
 import net.neoforged.fml.ModList;
+import net.neoforged.neoforge.server.ServerLifecycleHooks;
 
 import java.util.LinkedHashSet;
 import java.util.Set;
@@ -90,6 +95,37 @@ public final class RegistryContentCatalog implements ContentCatalog {
             return Set.of();
         }
         return MekanismChemicalIndex.chemicalsInNamespace(namespace);
+    }
+
+    @Override
+    public Set<ResourceLocation> dimensionsInTag(ResourceLocation tagId) {
+        var server = ServerLifecycleHooks.getCurrentServer();
+        if (server == null) {
+            return Set.of();
+        }
+        Set<ResourceLocation> out = new LinkedHashSet<>();
+        TagKey<LevelStem> tag = TagKey.create(Registries.LEVEL_STEM, tagId);
+        var registry = server.registryAccess().registryOrThrow(Registries.LEVEL_STEM);
+        for (Holder<LevelStem> holder : registry.getTagOrEmpty(tag)) {
+            holder.unwrapKey().map(ResourceKey::location).ifPresent(out::add);
+        }
+        return out;
+    }
+
+    @Override
+    public Set<ResourceLocation> dimensionsInNamespace(String namespace) {
+        var server = ServerLifecycleHooks.getCurrentServer();
+        if (server == null) {
+            return Set.of();
+        }
+        Set<ResourceLocation> out = new LinkedHashSet<>();
+        for (ResourceKey<Level> key : server.levelKeys()) {
+            ResourceLocation id = key.location();
+            if (namespace.equals(id.getNamespace())) {
+                out.add(id);
+            }
+        }
+        return out;
     }
 
     @Override

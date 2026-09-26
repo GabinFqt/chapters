@@ -18,6 +18,8 @@ public final class FixedContentCatalog implements ContentCatalog {
     private final Map<String, Set<ResourceLocation>> fluidNamespaces = new HashMap<>();
     private final Map<ResourceLocation, Set<ResourceLocation>> chemicalTags = new HashMap<>();
     private final Map<String, Set<ResourceLocation>> chemicalNamespaces = new HashMap<>();
+    private final Map<ResourceLocation, Set<ResourceLocation>> dimensionTags = new HashMap<>();
+    private final Map<String, Set<ResourceLocation>> dimensionNamespaces = new HashMap<>();
     private final Map<ResourceLocation, ResourceLocation> fluidToBucket = new HashMap<>();
 
     public FixedContentCatalog addItem(ResourceLocation itemId) {
@@ -62,6 +64,20 @@ public final class FixedContentCatalog implements ContentCatalog {
         return this;
     }
 
+    public FixedContentCatalog addDimension(ResourceLocation dimensionId) {
+        dimensionNamespaces.computeIfAbsent(dimensionId.getNamespace(), k -> new LinkedHashSet<>()).add(dimensionId);
+        return this;
+    }
+
+    public FixedContentCatalog addDimensionTag(ResourceLocation tagId, ResourceLocation... dimensionIds) {
+        Set<ResourceLocation> set = dimensionTags.computeIfAbsent(tagId, k -> new LinkedHashSet<>());
+        for (ResourceLocation id : dimensionIds) {
+            set.add(id);
+            addDimension(id);
+        }
+        return this;
+    }
+
     public FixedContentCatalog setBucket(ResourceLocation fluidKindId, ResourceLocation bucketItemId) {
         fluidToBucket.put(fluidKindId, bucketItemId);
         addItem(bucketItemId);
@@ -97,6 +113,16 @@ public final class FixedContentCatalog implements ContentCatalog {
     @Override
     public Set<ResourceLocation> chemicalsInNamespace(String namespace) {
         return copy(chemicalNamespaces.get(namespace));
+    }
+
+    @Override
+    public Set<ResourceLocation> dimensionsInTag(ResourceLocation tagId) {
+        return copy(dimensionTags.get(tagId));
+    }
+
+    @Override
+    public Set<ResourceLocation> dimensionsInNamespace(String namespace) {
+        return copy(dimensionNamespaces.get(namespace));
     }
 
     @Override

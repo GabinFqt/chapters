@@ -1,6 +1,7 @@
 package com.gabinx.chapters.api;
 
 import com.gabinx.chapters.compat.ftb.EffectiveStages;
+import com.gabinx.chapters.event.DimensionHandler;
 import com.gabinx.chapters.event.InventoryAuditor;
 import com.gabinx.chapters.network.ClientboundStageDeltaPayload;
 import com.gabinx.chapters.network.ClientboundStageIndicesPayload;
@@ -32,6 +33,7 @@ public final class ChaptersAPI {
         if (changed && EffectiveStages.shouldEmitPerPlayerDelta(player)) {
             PacketDistributor.sendToPlayer(player, new ClientboundStageDeltaPayload(stageId, false));
             InventoryAuditor.auditNow(player);
+            DimensionHandler.auditNow(player);
         }
         return changed;
     }

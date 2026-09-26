@@ -3,6 +3,7 @@ package com.gabinx.chapters.compat.ftb;
 import com.gabinx.chapters.Chapters;
 import com.gabinx.chapters.ChaptersRegistries;
 import com.gabinx.chapters.api.ChaptersAPI;
+import com.gabinx.chapters.event.DimensionHandler;
 import com.gabinx.chapters.event.InventoryAuditor;
 import com.gabinx.chapters.logic.StageAccounts;
 import com.gabinx.chapters.stage.PlayerStages;
@@ -56,6 +57,7 @@ final class FtbTeamsListeners {
         }
         ChaptersAPI.syncAll(player);
         InventoryAuditor.auditNow(player);
+        DimensionHandler.auditNow(player);
     }
 
     /**
@@ -106,6 +108,7 @@ final class FtbTeamsListeners {
             if (member != null && belongsToTeam(member, team)) {
                 ChaptersAPI.syncAll(member);
                 InventoryAuditor.auditNow(member);
+                DimensionHandler.auditNow(member);
             }
         }
     }

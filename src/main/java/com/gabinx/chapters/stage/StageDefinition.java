@@ -28,7 +28,11 @@ public record StageDefinition(
         Set<ResourceLocation> chemicalTags,
         Set<String> chemicalNamespaces,
         /** Crafting (and other) recipe holder ids to lock until the player has this stage. */
-        Set<ResourceLocation> recipes) {
+        Set<ResourceLocation> recipes,
+        /** Dimension ids (e.g. {@code minecraft:the_nether}) gated by this stage. */
+        Set<ResourceLocation> dimensions,
+        Set<ResourceLocation> dimensionTags,
+        Set<String> dimensionNamespaces) {
 
     public static StageDefinition fromJson(ResourceLocation id, JsonObject json) {
         Set<ResourceLocation> items = new LinkedHashSet<>();
@@ -41,6 +45,9 @@ public record StageDefinition(
         Set<ResourceLocation> chemicalTags = new LinkedHashSet<>();
         Set<String> chemicalNamespaces = new LinkedHashSet<>();
         Set<ResourceLocation> recipes = new LinkedHashSet<>();
+        Set<ResourceLocation> dimensions = new LinkedHashSet<>();
+        Set<ResourceLocation> dimensionTags = new LinkedHashSet<>();
+        Set<String> dimensionNamespaces = new LinkedHashSet<>();
 
         JsonArray namespacesJson = json.getAsJsonArray("namespaces");
         if (namespacesJson != null) {
@@ -120,6 +127,16 @@ public record StageDefinition(
             }
         }
 
+        JsonArray dimensionValues = json.getAsJsonArray("dimensions");
+        if (dimensionValues != null) {
+            for (JsonElement element : dimensionValues) {
+                if (!element.isJsonPrimitive()) {
+                    continue;
+                }
+                accumulateDimensionEntry(element.getAsString(), dimensions, dimensionTags, dimensionNamespaces);
+            }
+        }
+
         return new StageDefinition(
                 id,
                 items,
@@ -131,7 +148,10 @@ public record StageDefinition(
                 chemicals,
                 chemicalTags,
                 chemicalNamespaces,
-                recipes);
+                recipes,
+                dimensions,
+                dimensionTags,
+                dimensionNamespaces);
     }
 
     /**
@@ -279,6 +299,43 @@ public record StageDefinition(
         }
     }
 
+    static void addDimensionNamespace(Set<String> namespacesOut, String raw) {
+        addNamespace(namespacesOut, raw);
+    }
+
+    /**
+     * Dimension id, {@code #dimension_tag}, or {@code @} mod namespace for every loaded dimension under that
+     * namespace.
+     */
+    public static void accumulateDimensionEntry(
+            String raw,
+            Set<ResourceLocation> dimensionsOut,
+            Set<ResourceLocation> dimensionTagIdsOut,
+            Set<String> dimensionNamespacesOut) {
+        if (raw == null) {
+            return;
+        }
+        String trimmed = raw.trim();
+        if (trimmed.isEmpty()) {
+            return;
+        }
+        if (trimmed.startsWith("#")) {
+            ResourceLocation tagId = ResourceLocation.tryParse(trimmed.substring(1).trim());
+            if (tagId != null) {
+                dimensionTagIdsOut.add(tagId);
+            }
+            return;
+        }
+        if (trimmed.startsWith("@")) {
+            addDimensionNamespace(dimensionNamespacesOut, trimmed.substring(1));
+            return;
+        }
+        ResourceLocation dimensionId = ResourceLocation.tryParse(trimmed);
+        if (dimensionId != null) {
+            dimensionsOut.add(dimensionId);
+        }
+    }
+
     public boolean matches(ItemStack stack) {
         ResourceLocation key = BuiltInRegistries.ITEM.getKey(stack.getItem());
         if (items.contains(key)) {
@@ -339,5 +396,8 @@ public record StageDefinition(
         chemicalTags = Set.copyOf(chemicalTags);
         chemicalNamespaces = Set.copyOf(chemicalNamespaces);
         recipes = Set.copyOf(recipes);
+        dimensions = Set.copyOf(dimensions);
+        dimensionTags = Set.copyOf(dimensionTags);
+        dimensionNamespaces = Set.copyOf(dimensionNamespaces);
     }
 }

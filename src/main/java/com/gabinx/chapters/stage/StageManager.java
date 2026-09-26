@@ -6,6 +6,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.gabinx.chapters.Chapters;
 import com.gabinx.chapters.api.ChaptersAPI;
+import com.gabinx.chapters.event.DimensionHandler;
 import com.gabinx.chapters.event.InventoryAuditor;
 import com.gabinx.chapters.logic.RegistryContentCatalog;
 import com.gabinx.chapters.logic.StageBook;
@@ -77,6 +78,7 @@ public final class StageManager extends SimpleJsonResourceReloadListener {
         }
         for (ServerPlayer player : server.getPlayerList().getPlayers()) {
             InventoryAuditor.auditNow(player);
+            DimensionHandler.auditNow(player);
         }
     }
 
@@ -94,6 +96,10 @@ public final class StageManager extends SimpleJsonResourceReloadListener {
 
     public Map<ResourceLocation, Set<ResourceLocation>> recipeStagesIndexView() {
         return book.recipeStagesIndexView();
+    }
+
+    public Map<ResourceLocation, Set<ResourceLocation>> dimensionStagesIndexView() {
+        return book.dimensionStagesIndexView();
     }
 
     public Map<ResourceLocation, StageDefinition> allDefinitions() {
@@ -130,5 +136,9 @@ public final class StageManager extends SimpleJsonResourceReloadListener {
 
     public boolean isRecipeLocked(PlayerStages stages, ResourceLocation recipeHolderId) {
         return book.isRecipeLocked(recipeHolderId, stages.view());
+    }
+
+    public boolean isDimensionLocked(PlayerStages stages, ResourceLocation dimensionId) {
+        return book.isDimensionLocked(dimensionId, stages.view());
     }
 }

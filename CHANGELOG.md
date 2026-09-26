@@ -1,3 +1,18 @@
+# Chapters 1.2
+
+## Changes
+- **Dimension locks**: datapack `dimensions` / KubeJS `dimension:…` gate travel into named dimensions; players already inside are returned to the Overworld when a stage is lost or definitions reload.
+
+## Requirements
+- Minecraft 1.21.1
+- NeoForge 21.1.x
+- Java 21
+- Mekanism (optional, for chemical gating)
+- JEI (optional, to hide locked recipes/items client-side)
+- FTB Library / FTB Teams / FTB Quests (all optional; auto-detected at runtime)
+
+---
+
 # Chapters 1.1
 
 FTB Library / FTB Teams / FTB Quests integration.

@@ -11,12 +11,14 @@ public final class PlayerJoinHandler {
     public static void onLogin(PlayerEvent.PlayerLoggedInEvent event) {
         if (event.getEntity() instanceof ServerPlayer player) {
             ChaptersAPI.syncAll(player);
+            DimensionHandler.auditNow(player);
         }
     }
 
     public static void onRespawn(PlayerEvent.Clone event) {
         if (event.getEntity() instanceof ServerPlayer player) {
             ChaptersAPI.syncAll(player);
+            DimensionHandler.auditNow(player);
         }
     }
 }

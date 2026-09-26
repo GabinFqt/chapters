@@ -1,6 +1,8 @@
 {
   "commands.chapters.craft.blocked": "You cannot craft locked items: %s",
   "commands.chapters.craft.blocked_recipe": "You cannot use this recipe yet: %s",
+  "commands.chapters.dimension.blocked": "You cannot enter this dimension yet: %s",
+  "commands.chapters.dimension.ejected": "You were returned to the Overworld; this dimension is locked: %s",
   "commands.chapters.add.success": "Added stage '%s' to %s.",
   "commands.chapters.remove.success": "Removed stage '%s' from %s.",
   "commands.chapters.list.header": "Stages for %s: %s",

@@ -21,6 +21,10 @@ public interface ContentCatalog {
 
     Set<ResourceLocation> chemicalsInNamespace(String namespace);
 
+    Set<ResourceLocation> dimensionsInTag(ResourceLocation tagId);
+
+    Set<ResourceLocation> dimensionsInNamespace(String namespace);
+
     /** Item id of the filled bucket for this fluid kind, or empty if none. */
     Set<ResourceLocation> bucketItemsForFluid(ResourceLocation fluidKindId);
 }

@@ -8,7 +8,7 @@ This file holds **two paste-ready descriptions**: [Modrinth](#modrinth) (markdow
 
 **Full documentation (datapacks, KubeJS, FTB, examples): [GitHub Wiki](https://github.com/GabinFqt/chapters/wiki)**
 
-**Chapters** is a progression mod for **NeoForge 1.21.1** inspired by *GameStages* and *ItemStages*. It lets you split your modpack into named "chapters" (stages) and gate **items, fluids, Mekanism chemicals, and recipes** behind them, so players cannot interact with locked content until you unlock the stage.
+**Chapters** is a progression mod for **NeoForge 1.21.1** inspired by *GameStages* and *ItemStages*. It lets you split your modpack into named "chapters" (stages) and gate **items, fluids, Mekanism chemicals, recipes, and dimensions** behind them, so players cannot interact with locked content until you unlock the stage.
 
 It targets pack authors who want **one integrated tool** for progression on modern NeoForge, with first-class support for **datapacks**, **KubeJS**, **JEI**, **Mekanism**, and **FTB** (Library, Teams, Quests).
 
@@ -26,6 +26,7 @@ For branching logic (e.g. only grant if some other condition holds), combine **F
 - **Fluids:** by id, tag, or mod. Buckets, placement, and NeoForge fluid transfers are checked where a server player applies.
 - **Mekanism chemicals:** gas / infusion / slurry / pigment by id, tag, or mod, on Mekanism `ChemicalUtils` paths when a server player is in scope.
 - **Recipes:** by recipe id (`minecraft:diamond_pickaxe`, KubeJS `recipe:…`, etc.). Vanilla crafting-grid recipes are blocked server-side until unlocked.
+- **Dimensions:** by id, tag, or mod namespace (`@modid` in the `dimensions` list). Travel into a locked dimension is cancelled; players already inside are returned to the Overworld when a stage is lost or definitions reload.
 - **Whole mod at once:** `@modid` covers items, fluids, and chemicals from that namespace in one stage entry.
 
 Locked items are **auto-dropped** from inventory while the player lacks the stage (tick while online, and on stage removal or reload), so stashing in shulkers does not bypass the lock.
@@ -145,7 +146,7 @@ Copy from the next line through the end of this section (CurseForge project desc
 
 **Documentation (datapacks, KubeJS, FTB, examples):** https://github.com/GabinFqt/chapters/wiki
 
-**Chapters** is a progression mod for **NeoForge 1.21.1**, inspired by *GameStages* and *ItemStages*. Name your progression steps *chapters* (stages) and lock **items**, **fluids**, **Mekanism chemicals**, and **recipes** until you unlock them, so players cannot use gated content early.
+**Chapters** is a progression mod for **NeoForge 1.21.1**, inspired by *GameStages* and *ItemStages*. Name your progression steps *chapters* (stages) and lock **items**, **fluids**, **Mekanism chemicals**, **recipes**, and **dimensions** until you unlock them, so players cannot use gated content early.
 
 Built for pack authors who want **one integrated progression layer** on modern NeoForge: datapacks, KubeJS, JEI, Mekanism, and FTB (Library, Teams, Quests).
 
@@ -161,6 +162,7 @@ Built for pack authors who want **one integrated progression layer** on modern N
 - **Fluids:** same rules, including buckets and common transfers when a server player is involved.
 - **Mekanism chemicals:** gases, infusions, slurries, pigments by id, tag, or mod (*requires Mekanism*).
 - **Recipes:** by recipe id. **Vanilla crafting table** recipes are blocked on the server until unlocked.
+- **Dimensions:** by id, tag, or mod namespace. Travel into a locked dimension is cancelled; players already inside return to the Overworld when a stage is lost or definitions reload.
 - **One mod at once:** at-sign + modid can cover items, fluids, and chemicals from that mod in a single stage entry.
 - **Inventory enforcement:** locked items are **dropped automatically** while the player lacks the stage (each tick online, and when stages change or reload).
 

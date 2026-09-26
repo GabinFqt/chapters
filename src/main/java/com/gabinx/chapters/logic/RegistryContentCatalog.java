@@ -2,13 +2,18 @@ package com.gabinx.chapters.logic;
 
 import net.minecraft.core.Holder;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.dimension.LevelStem;
 import net.minecraft.world.level.material.Fluid;
 import net.minecraft.world.level.material.Fluids;
 import net.neoforged.fml.ModList;
+import net.neoforged.neoforge.server.ServerLifecycleHooks;
 
 import java.util.LinkedHashSet;
 import java.util.Set;
@@ -83,6 +88,36 @@ public final class RegistryContentCatalog implements ContentCatalog {
     @Override
     public Set<Identifier> chemicalsInNamespace(String namespace) {
         return invokeMekanismSet("chemicalsInNamespace", String.class, namespace);
+    }
+
+    @Override
+    public Set<Identifier> dimensionsInTag(Identifier tagId) {
+        var server = ServerLifecycleHooks.getCurrentServer();
+        if (server == null) {
+            return Set.of();
+        }
+        Set<Identifier> out = new LinkedHashSet<>();
+        TagKey<LevelStem> tag = TagKey.create(Registries.LEVEL_STEM, tagId);
+        for (Holder<LevelStem> holder : server.registryAccess().lookupOrThrow(Registries.LEVEL_STEM).getTagOrEmpty(tag)) {
+            holder.unwrapKey().map(ResourceKey::identifier).ifPresent(out::add);
+        }
+        return out;
+    }
+
+    @Override
+    public Set<Identifier> dimensionsInNamespace(String namespace) {
+        var server = ServerLifecycleHooks.getCurrentServer();
+        if (server == null) {
+            return Set.of();
+        }
+        Set<Identifier> out = new LinkedHashSet<>();
+        for (ResourceKey<Level> key : server.levelKeys()) {
+            Identifier id = key.identifier();
+            if (namespace.equals(id.getNamespace())) {
+                out.add(id);
+            }
+        }
+        return out;
     }
 
     @Override

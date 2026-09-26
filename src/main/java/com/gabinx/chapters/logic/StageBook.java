@@ -19,7 +19,7 @@ import java.util.Optional;
 import java.util.Set;
 
 /**
- * Datapack + runtime stage definitions and the four lock indices. Independent of the
+ * Datapack + runtime stage definitions and the five lock indices. Independent of the
  * {@link com.gabinx.chapters.stage.StageManager} singleton so unit tests can own an instance.
  */
 public final class StageBook {
@@ -32,6 +32,7 @@ public final class StageBook {
     private Map<Identifier, Set<Identifier>> fluidStagesIndex = Map.of();
     private Map<Identifier, Set<Identifier>> chemicalStagesIndex = Map.of();
     private Map<Identifier, Set<Identifier>> recipeStagesIndex = Map.of();
+    private Map<Identifier, Set<Identifier>> dimensionStagesIndex = Map.of();
 
     public StageBook(ContentCatalog catalog) {
         this.catalog = Objects.requireNonNull(catalog, "catalog");
@@ -76,6 +77,7 @@ public final class StageBook {
         Map<Identifier, Set<Identifier>> fluidMap = new HashMap<>();
         Map<Identifier, Set<Identifier>> chemicalMap = new HashMap<>();
         Map<Identifier, Set<Identifier>> recipeMap = new HashMap<>();
+        Map<Identifier, Set<Identifier>> dimensionMap = new HashMap<>();
 
         for (StageDefinition def : mergedDefinitions) {
             for (Identifier itemId : def.items()) {
@@ -123,12 +125,27 @@ public final class StageBook {
             for (Identifier recipeId : def.recipes()) {
                 recipeMap.computeIfAbsent(recipeId, k -> new LinkedHashSet<>()).add(def.id());
             }
+
+            for (Identifier dimensionId : def.dimensions()) {
+                dimensionMap.computeIfAbsent(dimensionId, k -> new LinkedHashSet<>()).add(def.id());
+            }
+            for (Identifier tagId : def.dimensionTags()) {
+                for (Identifier dimensionId : catalog.dimensionsInTag(tagId)) {
+                    dimensionMap.computeIfAbsent(dimensionId, k -> new LinkedHashSet<>()).add(def.id());
+                }
+            }
+            for (String ns : def.dimensionNamespaces()) {
+                for (Identifier dimensionId : catalog.dimensionsInNamespace(ns)) {
+                    dimensionMap.computeIfAbsent(dimensionId, k -> new LinkedHashSet<>()).add(def.id());
+                }
+            }
         }
 
         itemStagesIndex = freeze(itemMap);
         fluidStagesIndex = freeze(fluidMap);
         chemicalStagesIndex = freeze(chemicalMap);
         recipeStagesIndex = freeze(recipeMap);
+        dimensionStagesIndex = freeze(dimensionMap);
     }
 
     public synchronized Map<Identifier, Set<Identifier>> itemStagesIndexView() {
@@ -145,6 +162,10 @@ public final class StageBook {
 
     public synchronized Map<Identifier, Set<Identifier>> recipeStagesIndexView() {
         return recipeStagesIndex;
+    }
+
+    public synchronized Map<Identifier, Set<Identifier>> dimensionStagesIndexView() {
+        return dimensionStagesIndex;
     }
 
     public synchronized Map<Identifier, StageDefinition> allDefinitions() {
@@ -193,6 +214,13 @@ public final class StageBook {
             return false;
         }
         return LockRules.isLocked(recipeStagesIndex.get(recipeId), ownedStages);
+    }
+
+    public synchronized boolean isDimensionLocked(Identifier dimensionId, Set<Identifier> ownedStages) {
+        if (dimensionId == null) {
+            return false;
+        }
+        return LockRules.isLocked(dimensionStagesIndex.get(dimensionId), ownedStages);
     }
 
     /**

@@ -57,6 +57,9 @@ public final class ChaptersKubeJSBridge {
             var chemicalTags = new LinkedHashSet<Identifier>();
             var chemicalNamespaces = new LinkedHashSet<String>();
             var recipes = new LinkedHashSet<Identifier>();
+            var dimensions = new LinkedHashSet<Identifier>();
+            var dimensionTags = new LinkedHashSet<Identifier>();
+            var dimensionNamespaces = new LinkedHashSet<String>();
 
             for (String raw : entry.getValue()) {
                 if (raw != null && raw.regionMatches(true, 0, "fluid:", 0, 6)) {
@@ -65,6 +68,9 @@ public final class ChaptersKubeJSBridge {
                     StageDefinition.accumulateChemicalEntry(raw.substring(9).trim(), chemicals, chemicalTags, chemicalNamespaces);
                 } else if (raw != null && raw.regionMatches(true, 0, "recipe:", 0, 7)) {
                     StageDefinition.accumulateRecipeEntry(raw.substring(7).trim(), recipes);
+                } else if (raw != null && raw.regionMatches(true, 0, "dimension:", 0, 10)) {
+                    StageDefinition.accumulateDimensionEntry(
+                            raw.substring(10).trim(), dimensions, dimensionTags, dimensionNamespaces);
                 } else {
                     StageDefinition.accumulateEntry(raw, items, tags, namespaces);
                     // Match items: `@mod_id` gates every fluid and Mekanism chemical in that namespace too.
@@ -86,7 +92,10 @@ public final class ChaptersKubeJSBridge {
                     chemicals,
                     chemicalTags,
                     chemicalNamespaces,
-                    recipes));
+                    recipes,
+                    dimensions,
+                    dimensionTags,
+                    dimensionNamespaces));
         }
 
         StageManager.get().setRuntimeDefinitions(defs);

@@ -5,6 +5,7 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.gabinx.chapters.Chapters;
 import com.gabinx.chapters.api.ChaptersAPI;
+import com.gabinx.chapters.event.DimensionHandler;
 import com.gabinx.chapters.event.InventoryAuditor;
 import com.gabinx.chapters.logic.RegistryContentCatalog;
 import com.gabinx.chapters.logic.StageBook;
@@ -87,6 +88,7 @@ public final class StageManager extends SimplePreparableReloadListener<Map<Ident
         }
         for (ServerPlayer player : server.getPlayerList().getPlayers()) {
             InventoryAuditor.auditNow(player);
+            DimensionHandler.auditNow(player);
         }
     }
 
@@ -104,6 +106,10 @@ public final class StageManager extends SimplePreparableReloadListener<Map<Ident
 
     public Map<Identifier, Set<Identifier>> recipeStagesIndexView() {
         return book.recipeStagesIndexView();
+    }
+
+    public Map<Identifier, Set<Identifier>> dimensionStagesIndexView() {
+        return book.dimensionStagesIndexView();
     }
 
     public Map<Identifier, StageDefinition> allDefinitions() {
@@ -140,5 +146,9 @@ public final class StageManager extends SimplePreparableReloadListener<Map<Ident
 
     public boolean isRecipeLocked(PlayerStages stages, Identifier recipeHolderId) {
         return book.isRecipeLocked(recipeHolderId, stages.view());
+    }
+
+    public boolean isDimensionLocked(PlayerStages stages, Identifier dimensionId) {
+        return book.isDimensionLocked(dimensionId, stages.view());
     }
 }

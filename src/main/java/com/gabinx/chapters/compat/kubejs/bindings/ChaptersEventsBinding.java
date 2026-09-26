@@ -13,6 +13,7 @@ public final class ChaptersEventsBinding {
      * Optional {@code fluid:} prefix for fluids only ({@code fluid:minecraft:lava}, {@code fluid:#c:water}, {@code fluid:@mod_id}).
      * Optional {@code chemical:} prefix for Mekanism chemicals only ({@code chemical:mekanism:hydrogen}, {@code chemical:#mekanism:gases}, {@code chemical:@mekanism}) when Mekanism is installed.
      * Optional {@code recipe:} prefix locks a recipe by id only ({@code recipe:minecraft:diamond_pickaxe}); the output item can stay visible if not otherwise locked.
+     * Optional {@code dimension:} prefix locks a dimension by id ({@code dimension:minecraft:the_nether}, {@code dimension:#ns:tag}, {@code dimension:@modid}).
      * <p>
      * Breaking change: use a single collection-form call from KubeJS:
      * {@code defineStage('namespace:stage_id', ['minecraft:apple', '#minecraft:axes'])}.

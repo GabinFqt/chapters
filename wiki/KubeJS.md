@@ -10,6 +10,7 @@ Install **KubeJS** alongside **Chapters**. There is no separate Chapters config 
   - fluid: `"fluid:minecraft:lava"`
   - Mekanism chemical: `"chemical:mekanism:hydrogen"` (indexed only when Mekanism compat is active; on Minecraft **26** / Chapters **2.x** chemical gating is off until Mekanism ships)
   - recipe: `"recipe:minecraft:diamond_pickaxe"`
+  - dimension: `"dimension:minecraft:the_nether"`, `"dimension:#ns:tag"`, `"dimension:@modid"`
 
 Many `defineStage` calls in the **same server tick** are batched internally so indexing stays fast after load.
 
@@ -22,6 +23,7 @@ ServerEvents.loaded((event) => {
     '#minecraft:swords',
     'fluid:minecraft:lava',
     'recipe:minecraft:diamond_pickaxe',
+    'dimension:minecraft:the_nether',
     '@create'
   ])
 

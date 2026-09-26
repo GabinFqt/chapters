@@ -8,6 +8,7 @@ Major port to **Minecraft / NeoForge 26.1.2** (Java **25**).
 - Mekanism chemical compat is compiled out until a 26.1 Mekanism release exists (`enable_mekanism=false`).
 - Works around KubeJS embedding a broken Better Advanced Tooltips build.8 by Jar-in-Jaring BAT **2601.1.0-build.9+** so NeoForge selects the fixed jar at runtime.
 - Dev runs: Alice (`runClient`) and Bob (`runClientBob`) plus shared root `kubejs/` linking for dual-client testing.
+- **Dimension locks**: datapack `dimensions` / KubeJS `dimension:…` gate travel into named dimensions; players already inside are returned to the Overworld when a stage is lost or definitions reload.
 
 ## Requirements
 - Minecraft 26.1.2

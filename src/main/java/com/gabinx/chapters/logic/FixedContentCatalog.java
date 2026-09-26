@@ -18,6 +18,8 @@ public final class FixedContentCatalog implements ContentCatalog {
     private final Map<String, Set<Identifier>> fluidNamespaces = new HashMap<>();
     private final Map<Identifier, Set<Identifier>> chemicalTags = new HashMap<>();
     private final Map<String, Set<Identifier>> chemicalNamespaces = new HashMap<>();
+    private final Map<Identifier, Set<Identifier>> dimensionTags = new HashMap<>();
+    private final Map<String, Set<Identifier>> dimensionNamespaces = new HashMap<>();
     private final Map<Identifier, Identifier> fluidToBucket = new HashMap<>();
 
     public FixedContentCatalog addItem(Identifier itemId) {
@@ -62,6 +64,20 @@ public final class FixedContentCatalog implements ContentCatalog {
         return this;
     }
 
+    public FixedContentCatalog addDimension(Identifier dimensionId) {
+        dimensionNamespaces.computeIfAbsent(dimensionId.getNamespace(), k -> new LinkedHashSet<>()).add(dimensionId);
+        return this;
+    }
+
+    public FixedContentCatalog addDimensionTag(Identifier tagId, Identifier... dimensionIds) {
+        Set<Identifier> set = dimensionTags.computeIfAbsent(tagId, k -> new LinkedHashSet<>());
+        for (Identifier id : dimensionIds) {
+            set.add(id);
+            addDimension(id);
+        }
+        return this;
+    }
+
     public FixedContentCatalog setBucket(Identifier fluidKindId, Identifier bucketItemId) {
         fluidToBucket.put(fluidKindId, bucketItemId);
         addItem(bucketItemId);
@@ -97,6 +113,16 @@ public final class FixedContentCatalog implements ContentCatalog {
     @Override
     public Set<Identifier> chemicalsInNamespace(String namespace) {
         return copy(chemicalNamespaces.get(namespace));
+    }
+
+    @Override
+    public Set<Identifier> dimensionsInTag(Identifier tagId) {
+        return copy(dimensionTags.get(tagId));
+    }
+
+    @Override
+    public Set<Identifier> dimensionsInNamespace(String namespace) {
+        return copy(dimensionNamespaces.get(namespace));
     }
 
     @Override

@@ -88,4 +88,11 @@ public final class LockResolver {
         }
         return StageManager.get().isRecipeLocked(EffectiveStages.snapshot(player), recipeHolderId);
     }
+
+    public static boolean isDimensionLocked(ServerPlayer player, Identifier dimensionId) {
+        if (dimensionId == null) {
+            return false;
+        }
+        return StageManager.get().isDimensionLocked(EffectiveStages.snapshot(player), dimensionId);
+    }
 }

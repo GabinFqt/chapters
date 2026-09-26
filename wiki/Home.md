@@ -1,4 +1,4 @@
-**Chapters** is a progression mod for NeoForge. You gate **items, fluids, Mekanism chemicals**, and **recipes by id** behind named *chapters* (stages) using **datapacks** and optionally **KubeJS**, with optional **JEI** so players only see what they can use.
+**Chapters** is a progression mod for NeoForge. You gate **items, fluids, Mekanism chemicals**, **recipes by id**, and **dimensions** behind named *chapters* (stages) using **datapacks** and optionally **KubeJS**, with optional **JEI** so players only see what they can use.
 
 | Minecraft | Chapters jar | Java |
 | --- | --- | --- |
@@ -32,7 +32,7 @@ All require permission level as usual for multiplayer.
 | Page | Purpose |
 | --- | --- |
 | [[Stages-datapack]] | Where to put JSON, keys, `#` tags, `@mods` |
-| [[KubeJS]] | `defineStage`, `fluid:`, `recipe:`, `PlayerStages` |
+| [[KubeJS]] | `defineStage`, `fluid:`, `recipe:`, `dimension:`, `PlayerStages` |
 | [[Examples]] | Copy-paste setups (tiers, fluids, recipes, Mekanism) |
 | [[FTB-integration]] | FTB Library / FTB Teams / FTB Quests (Stage Reward, team-wide unlocks) |
 | [[JEI-and-limitations]] | What JEI hides and what crafting is blocked |

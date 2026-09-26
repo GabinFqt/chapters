@@ -5,6 +5,7 @@ import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType;
 import com.mojang.brigadier.suggestion.SuggestionProvider;
 import com.gabinx.chapters.api.ChaptersAPI;
+import com.gabinx.chapters.logic.StageCommandActions;
 import com.gabinx.chapters.stage.StageManager;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.SharedSuggestionProvider;
@@ -37,7 +38,7 @@ public final class ChaptersCommand {
                                         .executes(ctx -> {
                                             ServerPlayer player = EntityArgument.getPlayer(ctx, "player");
                                             Identifier stage = IdentifierArgument.getId(ctx, "stage");
-                                            validateStage(stage);
+                                            requireKnownStage(stage);
                                             ChaptersAPI.addStage(player, stage);
                                             ctx.getSource().sendSuccess(
                                                     () -> Component.translatable("commands.chapters.add.success", stage.toString(), player.getGameProfile().name()),
@@ -52,7 +53,7 @@ public final class ChaptersCommand {
                                         .executes(ctx -> {
                                             ServerPlayer player = EntityArgument.getPlayer(ctx, "player");
                                             Identifier stage = IdentifierArgument.getId(ctx, "stage");
-                                            validateStage(stage);
+                                            requireKnownStage(stage);
                                             ChaptersAPI.removeStage(player, stage);
                                             ctx.getSource().sendSuccess(
                                                     () -> Component.translatable("commands.chapters.remove.success", stage.toString(), player.getGameProfile().name()),
@@ -103,8 +104,12 @@ public final class ChaptersCommand {
                         })));
     }
 
-    private static void validateStage(Identifier stage) throws CommandSyntaxException {
-        if (!StageManager.get().stageIds().contains(stage)) {
+    /**
+     * Validates against the same rules as {@link StageCommandActions} (unknown stage → error).
+     */
+    private static void requireKnownStage(Identifier stage) throws CommandSyntaxException {
+        StageCommandActions.Outcome outcome = StageCommandActions.requireKnown(StageManager.get().stageIds(), stage);
+        if (outcome instanceof StageCommandActions.Outcome.UnknownStage) {
             throw new SimpleCommandExceptionType(
                     Component.translatable("commands.chapters.error.unknown_stage", stage.toString())
             ).create();

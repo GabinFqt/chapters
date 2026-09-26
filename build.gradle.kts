@@ -4,6 +4,7 @@ import java.nio.file.Path
 
 plugins {
     java
+    eclipse
     id("net.neoforged.moddev") version "2.0.141"
     id("me.modmuss50.mod-publish-plugin") version "2.2.0"
 }
@@ -61,6 +62,11 @@ neoForge {
         }
     }
 
+    unitTest {
+        enable()
+        testedMod = mods.getByName(property("mod_id").toString())
+    }
+
     runs {
         create("client") {
             client()
@@ -75,6 +81,10 @@ neoForge {
             server()
         }
     }
+}
+
+tasks.test {
+    useJUnitPlatform()
 }
 
 sourceSets {
@@ -172,6 +182,13 @@ tasks.matching { it.name == "runClient" || it.name == "runClientBob" || it.name 
     .configureEach { dependsOn(linkKubejs) }
 
 dependencies {
+    // Explicit API jar so IDEs (Eclipse JDT / Cursor Java) put JUnit on the test classpath.
+    testImplementation(platform("org.junit:junit-bom:5.14.1"))
+    testImplementation("org.junit.jupiter:junit-jupiter:5.14.1")
+    testImplementation("org.junit.jupiter:junit-jupiter-api:5.14.1")
+    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.14.1")
+    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+
     compileOnly("dev.latvian.mods:kubejs-neoforge:${property("kubejs_version")}")
     runtimeOnly("dev.latvian.mods:kubejs-neoforge:${property("kubejs_version")}")
     runtimeOnly("dev.latvian.mods:rhino:${property("rhino_version")}")

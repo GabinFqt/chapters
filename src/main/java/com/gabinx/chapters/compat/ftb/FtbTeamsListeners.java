@@ -4,6 +4,7 @@ import com.gabinx.chapters.Chapters;
 import com.gabinx.chapters.ChaptersRegistries;
 import com.gabinx.chapters.api.ChaptersAPI;
 import com.gabinx.chapters.event.InventoryAuditor;
+import com.gabinx.chapters.logic.StageAccounts;
 import com.gabinx.chapters.stage.PlayerStages;
 import dev.ftb.mods.ftbteams.api.FTBTeamsAPI;
 import dev.ftb.mods.ftbteams.api.Team;
@@ -71,16 +72,15 @@ final class FtbTeamsListeners {
             return;
         }
 
-        Set<String> merged = new HashSet<>();
-        merged.addAll(FtbTeamsBridge.readStageStrings(party));
-        if (previous != null) {
-            merged.addAll(FtbTeamsBridge.readStageStrings(previous));
-        }
-        if (player != null) {
-            for (Identifier id : player.getData(ChaptersRegistries.PLAYER_STAGES.get()).view()) {
-                merged.add(id.toString());
-            }
-        }
+        Set<Identifier> partyIds = toIdentifiers(FtbTeamsBridge.readStageStrings(party));
+        Set<Identifier> previousIds = previous != null
+                ? toIdentifiers(FtbTeamsBridge.readStageStrings(previous))
+                : Set.of();
+        Set<Identifier> attachmentIds = player != null
+                ? player.getData(ChaptersRegistries.PLAYER_STAGES.get()).view()
+                : Set.of();
+        Set<Identifier> mergedIds = StageAccounts.mergeOnPartyJoin(partyIds, previousIds, attachmentIds);
+        Set<String> merged = toStrings(mergedIds);
 
         FtbTeamsBridge.writeStageStrings(party, merged);
         Chapters.LOGGER.info(
@@ -102,9 +102,11 @@ final class FtbTeamsListeners {
         Team personal = data.playerTeam();
         ServerPlayer player = data.player();
 
-        Set<String> snapshot = party != null ? FtbTeamsBridge.readStageStrings(party) : Set.of();
+        Set<Identifier> snapshot = StageAccounts.stagesAfterPartyLeave(
+                party != null ? toIdentifiers(FtbTeamsBridge.readStageStrings(party)) : Set.of()
+        );
         if (personal != null && !personal.isClientTeam()) {
-            FtbTeamsBridge.writeStageStrings(personal, snapshot);
+            FtbTeamsBridge.writeStageStrings(personal, toStrings(snapshot));
             Chapters.LOGGER.info(
                     "Chapters: copied {} party stage(s) onto personal team {} after leave",
                     snapshot.size(),
@@ -132,13 +134,10 @@ final class FtbTeamsListeners {
         }
 
         Team team = data.team();
-        if (team == null || team.isClientTeam() || team.isPartyTeam()) {
-            ChaptersAPI.syncAll(player);
-            return;
-        }
-
         PlayerStages legacy = player.getData(ChaptersRegistries.PLAYER_STAGES.get());
-        if (legacy.view().isEmpty()) {
+        boolean isParty = team != null && !team.isClientTeam() && team.isPartyTeam();
+        if (team == null || team.isClientTeam()
+                || !StageAccounts.shouldMigrateLegacy(isParty, legacy.view().isEmpty())) {
             ChaptersAPI.syncAll(player);
             return;
         }
@@ -178,5 +177,24 @@ final class FtbTeamsListeners {
         return FTBTeamsAPI.api().getManager().getTeamForPlayer(player)
                 .map(t -> t.getId().equals(team.getId()))
                 .orElse(false);
+    }
+
+    private static Set<Identifier> toIdentifiers(Iterable<String> raw) {
+        Set<Identifier> out = new HashSet<>();
+        for (String s : raw) {
+            Identifier rl = Identifier.tryParse(s);
+            if (rl != null) {
+                out.add(rl);
+            }
+        }
+        return out;
+    }
+
+    private static Set<String> toStrings(Set<Identifier> ids) {
+        Set<String> out = new HashSet<>();
+        for (Identifier id : ids) {
+            out.add(id.toString());
+        }
+        return out;
     }
 }

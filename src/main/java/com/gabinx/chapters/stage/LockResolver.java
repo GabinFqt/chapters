@@ -1,6 +1,7 @@
 package com.gabinx.chapters.stage;
 
 import com.gabinx.chapters.compat.ftb.EffectiveStages;
+import com.gabinx.chapters.logic.LockRules;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
@@ -23,7 +24,6 @@ public final class LockResolver {
         if (StageManager.get().isItemLocked(EffectiveStages.snapshot(player), stack)) {
             return true;
         }
-        // Filled buckets are gated by their fluid stage (water_bucket → water, lava_bucket → lava).
         return isFluidBucketLocked(player, stack);
     }
 
@@ -31,7 +31,6 @@ public final class LockResolver {
         if (stack == null || stack.isEmpty()) {
             return false;
         }
-
         return StageManager.get().isFluidLocked(EffectiveStages.snapshot(player), stack);
     }
 
@@ -56,7 +55,6 @@ public final class LockResolver {
         return false;
     }
 
-    /** True when this stack is a filled bucket whose fluid is locked for the player. */
     public static boolean isFluidBucketLocked(ServerPlayer player, ItemStack stack) {
         if (stack.isEmpty() || !(stack.getItem() instanceof BucketItem bucket)) {
             return false;
@@ -74,26 +72,13 @@ public final class LockResolver {
             return false;
         }
         Set<Identifier> defining = ClientStageIndices.fluidsView().get(kind);
-        if (defining == null || defining.isEmpty()) {
-            return false;
-        }
-        Set<Identifier> active = ClientStageCache.snapshot();
-        for (Identifier stageId : defining) {
-            if (active.contains(stageId)) {
-                return false;
-            }
-        }
-        return true;
+        return LockRules.isLocked(defining, ClientStageCache.snapshot());
     }
 
-    /**
-     * Mekanism chemical registry key (e.g. {@code mekanism:hydrogen}). Only meaningful when Mekanism is installed.
-     */
     public static boolean isChemicalLocked(ServerPlayer player, Identifier chemicalRegistryKey) {
         if (chemicalRegistryKey == null) {
             return false;
         }
-
         return StageManager.get().isChemicalLocked(EffectiveStages.snapshot(player), chemicalRegistryKey);
     }
 
@@ -101,7 +86,6 @@ public final class LockResolver {
         if (recipeHolderId == null) {
             return false;
         }
-
         return StageManager.get().isRecipeLocked(EffectiveStages.snapshot(player), recipeHolderId);
     }
 }

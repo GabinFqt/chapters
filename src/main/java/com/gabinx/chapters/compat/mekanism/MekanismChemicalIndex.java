@@ -21,41 +21,55 @@ public final class MekanismChemicalIndex {
     private MekanismChemicalIndex() {
     }
 
+    public static Set<Identifier> chemicalsInTag(Identifier tagId) {
+        Set<Identifier> out = new LinkedHashSet<>();
+        var registry = MekanismAPI.CHEMICAL_REGISTRY;
+        TagKey<Chemical> tag = TagKey.create(registry.key(), tagId);
+        registry.getTag(tag).ifPresent(holders -> {
+            for (Holder<Chemical> holder : holders) {
+                Identifier key = registry.getKey(holder.value());
+                if (key != null && !MekanismAPI.EMPTY_CHEMICAL_NAME.equals(key)) {
+                    out.add(key);
+                }
+            }
+        });
+        return out;
+    }
+
+    public static Set<Identifier> chemicalsInNamespace(String namespace) {
+        Set<Identifier> out = new LinkedHashSet<>();
+        var registry = MekanismAPI.CHEMICAL_REGISTRY;
+        for (Chemical chemical : registry) {
+            if (chemical == null) {
+                continue;
+            }
+            Identifier key = registry.getKey(chemical);
+            if (key != null
+                    && !MekanismAPI.EMPTY_CHEMICAL_NAME.equals(key)
+                    && namespace.equals(key.getNamespace())) {
+                out.add(key);
+            }
+        }
+        return out;
+    }
+
     public static Map<Identifier, Set<Identifier>> buildIndex(List<StageDefinition> mergedDefinitions) {
         Map<Identifier, Set<Identifier>> chemicalMap = new HashMap<>();
-        var registry = MekanismAPI.CHEMICAL_REGISTRY;
-
         for (StageDefinition def : mergedDefinitions) {
             for (Identifier chemicalId : def.chemicals()) {
                 chemicalMap.computeIfAbsent(chemicalId, k -> new LinkedHashSet<>()).add(def.id());
             }
-
             for (Identifier tagId : def.chemicalTags()) {
-                TagKey<Chemical> tag = TagKey.create(registry.key(), tagId);
-                registry.getTag(tag).ifPresent(holders -> {
-                    for (Holder<Chemical> holder : holders) {
-                        Chemical chemical = holder.value();
-                        Identifier key = registry.getKey(chemical);
-                        if (key != null && !MekanismAPI.EMPTY_CHEMICAL_NAME.equals(key)) {
-                            chemicalMap.computeIfAbsent(key, k -> new LinkedHashSet<>()).add(def.id());
-                        }
-                    }
-                });
+                for (Identifier key : chemicalsInTag(tagId)) {
+                    chemicalMap.computeIfAbsent(key, k -> new LinkedHashSet<>()).add(def.id());
+                }
             }
-
             for (String ns : def.chemicalNamespaces()) {
-                for (Chemical chemical : registry) {
-                    if (chemical == null || MekanismAPI.EMPTY_CHEMICAL_NAME.equals(registry.getKey(chemical))) {
-                        continue;
-                    }
-                    Identifier key = registry.getKey(chemical);
-                    if (key != null && ns.equals(key.getNamespace())) {
-                        chemicalMap.computeIfAbsent(key, k -> new LinkedHashSet<>()).add(def.id());
-                    }
+                for (Identifier key : chemicalsInNamespace(ns)) {
+                    chemicalMap.computeIfAbsent(key, k -> new LinkedHashSet<>()).add(def.id());
                 }
             }
         }
-
         return chemicalMap;
     }
 }

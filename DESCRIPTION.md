@@ -17,7 +17,7 @@ Works on **Minecraft 1.21** (Chapters **1.x**) and **Minecraft 26** (Chapters **
 - **Gate the next era**: Keep netherite, Create, Mekanism, or a whole mod locked until players finish the early game.
 - **Hide the spoilers**: With **JEI**, locked items and recipes stay out of the recipe book until unlocked.
 - **Enforce on the server**: Locked items cannot be picked up or crafted (vanilla crafting), and they are **dropped from inventory** if somehow obtained early.
-- **Lock more than items**: Fluids (buckets, placement, transfers), recipes by id, and Mekanism chemicals when Mekanism is present.
+- **Lock more than items**: Fluids (buckets, placement, transfers), recipes by id, dimensions (travel cancelled; players already inside return to the Overworld), and Mekanism chemicals when Mekanism is present.
 - **One chapter, one mod**: Lock everything from a mod with a single entry when you want a clean “era” boundary.
 - **Solo or party**: With **FTB Teams**, the whole party shares unlocks. With **FTB Quests**, grant or require chapters using the built-in Stage reward / task fields.
 - **Your tools**: Define chapters with **datapacks** and/or **KubeJS**; grant them with commands, quests, or scripts.
@@ -85,7 +85,7 @@ Available for **Minecraft 1.21** (Chapters **1.x**) and **Minecraft 26** (Chapte
 - **Gate the next era**: Keep netherite, Create, Mekanism, or a whole mod locked until players finish the early game.
 - **Hide the spoilers**: With **JEI**, locked items and recipes stay out of the recipe book until unlocked.
 - **Enforce on the server**: Locked items cannot be picked up or crafted on the vanilla crafting table, and they are **dropped from inventory** if obtained early.
-- **Lock more than items**: Fluids (buckets, cauldrons, transfers), recipes by id, and Mekanism chemicals when Mekanism is available.
+- **Lock more than items**: Fluids (buckets, cauldrons, transfers), recipes by id, dimensions (travel cancelled; players already inside return to the Overworld), and Mekanism chemicals when Mekanism is available.
 - **One chapter, one mod**: Lock an entire mod behind a single chapter when you want a clean era boundary.
 - **Solo or party**: With **FTB Teams**, the party shares unlocks. With **FTB Quests**, grant or require chapters using the built-in Stage reward / task fields.
 - **Your tools**: Define chapters with **datapacks** and/or **KubeJS**; grant them with commands, quests, or scripts.

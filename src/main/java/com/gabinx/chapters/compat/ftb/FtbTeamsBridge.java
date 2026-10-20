@@ -69,6 +69,23 @@ final class FtbTeamsBridge {
         return safeReadStages(team).contains(stage.toString());
     }
 
+    /**
+     * Snapshot of a team's TEAM_STAGES as mutable strings (empty when unset / shared default).
+     */
+    static Set<String> readStageStrings(Team team) {
+        return new HashSet<>(safeReadStages(team));
+    }
+
+    /**
+     * Replace the team's TEAM_STAGES with {@code stages} (copied) and notify listeners.
+     */
+    static void writeStageStrings(Team team, Set<String> stages) {
+        if (team == null || team.isClientTeam()) {
+            return;
+        }
+        commitStages(team, new HashSet<>(stages));
+    }
+
     static boolean addStage(ServerPlayer player, ResourceLocation stage) {
         Team team = teamOf(player);
         if (team == null || team.isClientTeam()) {

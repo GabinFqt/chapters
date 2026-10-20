@@ -107,7 +107,10 @@ public final class LockResolver {
             return false;
         }
         Set<ResourceLocation> defining = ClientStageIndices.fluidsView().get(kind);
-        return LockRules.isLocked(defining, ClientStageCache.snapshot());
+        if (!LockRules.isLocked(defining, ClientStageCache.snapshot())) {
+            return false;
+        }
+        return ClientStageIndices.fluidTransferView().containsKey(kind);
     }
 
     public static boolean isChemicalLocked(ServerPlayer player, ResourceLocation chemicalRegistryKey) {

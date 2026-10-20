@@ -21,6 +21,8 @@ public final class ClientStageView {
     private Map<ResourceLocation, Set<ResourceLocation>> fluidJei = Map.of();
     private Map<ResourceLocation, Set<ResourceLocation>> chemicalJei = Map.of();
     private Map<ResourceLocation, Set<ResourceLocation>> recipeJei = Map.of();
+    private Map<ResourceLocation, Set<ResourceLocation>> fluidTransfer = Map.of();
+    private Map<ResourceLocation, Set<ResourceLocation>> chemicalTransfer = Map.of();
 
     public synchronized void setStages(Set<ResourceLocation> next) {
         stages.clear();
@@ -55,7 +57,9 @@ public final class ClientStageView {
                 nextItems,
                 nextFluids,
                 nextChemicals,
-                nextRecipes);
+                nextRecipes,
+                nextFluids,
+                nextChemicals);
     }
 
     public synchronized void replaceIndices(
@@ -68,6 +72,31 @@ public final class ClientStageView {
             Map<ResourceLocation, Set<ResourceLocation>> nextChemicalJei,
             Map<ResourceLocation, Set<ResourceLocation>> nextRecipeJei
     ) {
+        replaceIndices(
+                nextItems,
+                nextFluids,
+                nextChemicals,
+                nextRecipes,
+                nextItemJei,
+                nextFluidJei,
+                nextChemicalJei,
+                nextRecipeJei,
+                nextFluids,
+                nextChemicals);
+    }
+
+    public synchronized void replaceIndices(
+            Map<ResourceLocation, Set<ResourceLocation>> nextItems,
+            Map<ResourceLocation, Set<ResourceLocation>> nextFluids,
+            Map<ResourceLocation, Set<ResourceLocation>> nextChemicals,
+            Map<ResourceLocation, Set<ResourceLocation>> nextRecipes,
+            Map<ResourceLocation, Set<ResourceLocation>> nextItemJei,
+            Map<ResourceLocation, Set<ResourceLocation>> nextFluidJei,
+            Map<ResourceLocation, Set<ResourceLocation>> nextChemicalJei,
+            Map<ResourceLocation, Set<ResourceLocation>> nextRecipeJei,
+            Map<ResourceLocation, Set<ResourceLocation>> nextFluidTransfer,
+            Map<ResourceLocation, Set<ResourceLocation>> nextChemicalTransfer
+    ) {
         items = freeze(nextItems);
         fluids = freeze(nextFluids);
         chemicals = freeze(nextChemicals);
@@ -76,6 +105,8 @@ public final class ClientStageView {
         fluidJei = freeze(nextFluidJei);
         chemicalJei = freeze(nextChemicalJei);
         recipeJei = freeze(nextRecipeJei);
+        fluidTransfer = freeze(nextFluidTransfer);
+        chemicalTransfer = freeze(nextChemicalTransfer);
     }
 
     public synchronized Map<ResourceLocation, Set<ResourceLocation>> itemsView() {
@@ -108,6 +139,14 @@ public final class ClientStageView {
 
     public synchronized Map<ResourceLocation, Set<ResourceLocation>> recipeJeiView() {
         return recipeJei;
+    }
+
+    public synchronized Map<ResourceLocation, Set<ResourceLocation>> fluidTransferView() {
+        return fluidTransfer;
+    }
+
+    public synchronized Map<ResourceLocation, Set<ResourceLocation>> chemicalTransferView() {
+        return chemicalTransfer;
     }
 
     public synchronized Set<ResourceLocation> lockedFluidIds() {
@@ -151,6 +190,32 @@ public final class ClientStageView {
             }
         }
         return locked;
+    }
+
+    /**
+     * Matches {@link StageBook#isRestricted}: locked on the full defining set, and present in the
+     * flag-filtered index (at least one defining stage enables that flag).
+     */
+    public static Set<ResourceLocation> computeFlagRestricted(
+            Map<ResourceLocation, Set<ResourceLocation>> lockIndex,
+            Map<ResourceLocation, Set<ResourceLocation>> flagIndex,
+            Set<ResourceLocation> activeStages
+    ) {
+        Set<ResourceLocation> restricted = new LinkedHashSet<>();
+        if (lockIndex == null || lockIndex.isEmpty() || flagIndex == null || flagIndex.isEmpty()) {
+            return restricted;
+        }
+        Set<ResourceLocation> owned = activeStages == null ? Set.of() : activeStages;
+        for (Map.Entry<ResourceLocation, Set<ResourceLocation>> entry : lockIndex.entrySet()) {
+            ResourceLocation id = entry.getKey();
+            if (!flagIndex.containsKey(id)) {
+                continue;
+            }
+            if (LockRules.isLocked(entry.getValue(), owned)) {
+                restricted.add(id);
+            }
+        }
+        return restricted;
     }
 
     private static Map<ResourceLocation, Set<ResourceLocation>> freeze(Map<ResourceLocation, Set<ResourceLocation>> next) {

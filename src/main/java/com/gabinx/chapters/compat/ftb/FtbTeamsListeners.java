@@ -10,6 +10,8 @@ import com.gabinx.chapters.stage.PlayerStages;
 import dev.ftb.mods.ftbteams.api.FTBTeamsAPI;
 import dev.ftb.mods.ftbteams.api.Team;
 import dev.ftb.mods.ftbteams.api.event.PlayerChangedTeamEvent;
+import dev.ftb.mods.ftbteams.api.event.PlayerJoinedPartyTeamEvent;
+import dev.ftb.mods.ftbteams.api.event.PlayerLeftPartyTeamEvent;
 import dev.ftb.mods.ftbteams.api.event.PlayerLoggedInAfterTeamEvent;
 import dev.ftb.mods.ftbteams.api.event.TeamEvent;
 import dev.ftb.mods.ftbteams.api.event.TeamPropertiesChangedEvent;
@@ -19,6 +21,7 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.neoforge.server.ServerLifecycleHooks;
 
+import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
 
@@ -33,6 +36,8 @@ final class FtbTeamsListeners {
     static void register() {
         TeamEvent.PROPERTIES_CHANGED.register(FtbTeamsListeners::onPropertiesChanged);
         TeamEvent.PLAYER_CHANGED.register(FtbTeamsListeners::onPlayerChangedTeam);
+        TeamEvent.PLAYER_JOINED_PARTY.register(FtbTeamsListeners::onJoinedParty);
+        TeamEvent.PLAYER_LEFT_PARTY.register(FtbTeamsListeners::onLeftParty);
         TeamEvent.PLAYER_LOGGED_IN.register(FtbTeamsListeners::onPlayerLoggedIn);
         Chapters.LOGGER.info("Chapters: FTB Teams listeners registered");
     }
@@ -64,6 +69,71 @@ final class FtbTeamsListeners {
         ChaptersAPI.syncAll(player);
         InventoryAuditor.auditNow(player);
         DimensionHandler.auditNow(player);
+    }
+
+    /**
+     * Party join: union previous personal stages + current party stages into the party store,
+     * so every online member sees the merged set.
+     */
+    private static void onJoinedParty(PlayerJoinedPartyTeamEvent event) {
+        if (!EffectiveStages.useTeamStages()) {
+            return;
+        }
+        Team party = event.getTeam();
+        Team previous = event.getPreviousTeam();
+        ServerPlayer player = event.getPlayer();
+        if (party == null || party.isClientTeam()) {
+            return;
+        }
+
+        Set<ResourceLocation> partyIds = toResourceLocations(FtbTeamsBridge.readStageStrings(party));
+        Set<ResourceLocation> previousIds = previous != null
+                ? toResourceLocations(FtbTeamsBridge.readStageStrings(previous))
+                : Set.of();
+        Set<ResourceLocation> attachmentIds = player != null
+                ? player.getData(ChaptersRegistries.PLAYER_STAGES.get()).view()
+                : Set.of();
+        Set<ResourceLocation> mergedIds = StageAccounts.mergeOnPartyJoin(partyIds, previousIds, attachmentIds);
+        Set<String> merged = toStrings(mergedIds);
+
+        FtbTeamsBridge.writeStageStrings(party, merged);
+        Chapters.LOGGER.info(
+                "Chapters: merged {} stage(s) into party {} after {} joined",
+                merged.size(),
+                party.getShortName(),
+                player != null ? player.getGameProfile().getName() : "?"
+        );
+    }
+
+    /**
+     * Party leave: copy the party's stages onto the player's new personal team so they keep
+     * everything they had while in the party, but are no longer synced with the party afterward.
+     */
+    private static void onLeftParty(PlayerLeftPartyTeamEvent event) {
+        if (!EffectiveStages.useTeamStages()) {
+            return;
+        }
+        Team party = event.getTeam();
+        Team personal = event.getPlayerTeam();
+        ServerPlayer player = event.getPlayer();
+
+        Set<ResourceLocation> snapshot = StageAccounts.stagesAfterPartyLeave(
+                party != null ? toResourceLocations(FtbTeamsBridge.readStageStrings(party)) : Set.of()
+        );
+        if (personal != null && !personal.isClientTeam()) {
+            FtbTeamsBridge.writeStageStrings(personal, toStrings(snapshot));
+            Chapters.LOGGER.info(
+                    "Chapters: copied {} party stage(s) onto personal team {} after leave",
+                    snapshot.size(),
+                    personal.getShortName()
+            );
+        }
+
+        if (player != null) {
+            ChaptersAPI.syncAll(player);
+            InventoryAuditor.auditNow(player);
+            DimensionHandler.auditNow(player);
+        }
     }
 
     /**
@@ -126,5 +196,24 @@ final class FtbTeamsListeners {
         return FTBTeamsAPI.api().getManager().getTeamForPlayer(player)
                 .map(t -> t.getId().equals(team.getId()))
                 .orElse(false);
+    }
+
+    private static Set<ResourceLocation> toResourceLocations(Iterable<String> raw) {
+        Set<ResourceLocation> out = new HashSet<>();
+        for (String s : raw) {
+            ResourceLocation rl = ResourceLocation.tryParse(s);
+            if (rl != null) {
+                out.add(rl);
+            }
+        }
+        return out;
+    }
+
+    private static Set<String> toStrings(Set<ResourceLocation> ids) {
+        Set<String> out = new HashSet<>();
+        for (ResourceLocation id : ids) {
+            out.add(id.toString());
+        }
+        return out;
     }
 }

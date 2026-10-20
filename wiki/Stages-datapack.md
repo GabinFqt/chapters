@@ -1,5 +1,7 @@
 # Datapack stages
 
+Optional alternative to **[[KubeJS]]** (recommended for most packs). Datapack JSON uses the same stage ids, list prefixes (`#`, `@`), and [[Restriction-flags]]. A KubeJS `defineStage` with the **same id** replaces the datapack definition.
+
 ## Folder layout
 
 Inside your datapack ZIP or folder:
@@ -30,15 +32,15 @@ Anything you don’t need can be omitted.
 | `namespaces` | List of mod ids; same broad effect as adding **`@`** for items **and** fluids **and** chemicals for each |
 | `fluid_namespaces` | Extra mod ids that only add fluid locks |
 | `chemical_namespaces` | Extra mod ids that only add chemical locks |
-| `restrictions` | Optional stage-wide defaults for lock behaviours (all `true` if omitted). See below. |
+| `restrictions` | Optional stage-wide defaults for lock behaviours (all `true` if omitted). Full guide: [[Restriction-flags]]. |
 
-List entries may be plain strings (legacy) or objects with an `id` plus per-entry overrides, e.g. `{ "id": "minecraft:emerald", "jei": false }`.
+List entries may be plain strings (legacy) or objects with an `id` (or `item`) plus per-entry flag overrides, e.g. `{ "id": "minecraft:emerald", "jei": false }`.
 
-### Restriction flags
+### Restriction flags (summary)
 
-Every gated content id inherits these behaviours while the player lacks the stage. Defaults are all **`true`** (same as older Chapters builds). Set a flag to `false` on the stage (`restrictions`) or on one entry to disable that behaviour for that content.
+Defaults are all **`true`** (same as older Chapters builds). Set a flag to `false` on the stage (`restrictions`) or on one entry to disable that behaviour for that content. Flags are **independent**: `inventory: false` does not turn off pickup or craft.
 
-| Flag | Effect |
+| Flag | Effect while the content is still locked |
 | --- | --- |
 | `pickup` | Block picking the item up from the world |
 | `inventory` | Auto-drop the item from the player inventory |
@@ -46,6 +48,8 @@ Every gated content id inherits these behaviours while the player lacks the stag
 | `jei` | Hide the ingredient / recipe in JEI |
 | `transfer` | Block fluid / chemical tank transfers (and related bucket place/fill) |
 | `travel` | Block travel into a locked dimension |
+
+Only some flags matter for each list type (e.g. `travel` only affects `dimensions`). For the full mental model, overrides vs tags, multi-stage OR, and recipes, see **[[Restriction-flags]]**.
 
 Example: lock diamond fully, but keep emerald visible in JEI and allow carrying it:
 
@@ -74,7 +78,14 @@ Example: lock diamond fully, but keep emerald visible in JEI and allow carrying 
 
 ## When the same item appears in more than one file
 
-If **different** stage JSON files (or KubeJS `defineStage` calls) all mention the same item, fluid, recipe, or dimension, the player must satisfy **every** such definition: they need at least one allowed stage **from each** file that lists that thing. That way two packs can both add rules without silently undoing each other.
+If **different** stage JSON files (or KubeJS `defineStage` calls) all mention the same item, fluid, recipe, or dimension:
+
+1. **Unlock** is OR: owning **any one** of those stages unlocks the content for **every** behaviour.
+2. **While locked** (owns none): each behaviour is blocked if **any** listing enables that flag.
+
+Consequence: a second pack cannot “soften” another pack’s lock by listing the same id with flags set to `false`. Listing an id at all still counts as a defining stage for unlock. Prefer distinct stage ids per pack when you need separate progression tracks.
+
+Within a **single** stage file, an explicit id entry **overrides** flags that came from a tag or namespace expansion for that same id. Details: [[Restriction-flags]].
 
 ---
 
@@ -107,7 +118,7 @@ If **different** stage JSON files (or KubeJS `defineStage` calls) all mention th
 
 ## Template datapack to copy
 
-A working **`pack.mcmeta`** plus several example stages:
+A working **`pack.mcmeta`** plus several example stages (including granular flags):
 
 - Minecraft **26**: [examples/datapack/tutorial on `26`](https://github.com/GabinFqt/chapters/tree/26/examples/datapack/tutorial)
 - Minecraft **1.21**: [examples/datapack/tutorial on `main`](https://github.com/GabinFqt/chapters/tree/main/examples/datapack/tutorial)

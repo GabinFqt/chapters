@@ -16,7 +16,7 @@ It targets pack authors who want **one integrated tool** for progression on mode
 
 When **FTB Library** is installed, Chapters registers as the FTB **stage provider** (`StageHelper`). **FTB Quests** can then use the built-in **Stage Reward** (grant a chapter on claim), **Stage Task** (require a chapter), and **Stage Required** on quests or chapters, all using your chapter ids with no extra wiring.
 
-With **FTB Teams** as well, unlocks are **team-scoped** via FTB's `TEAM_STAGES`: the whole party shares chapter progress, inventory checks and JEI updates apply for every online member, and `/chapters`, KubeJS `PlayerStages`, and FTB Quests stage rewards all read and write the same team storage. Joining a team adopts that team's stages; leaving personal progress behind follows FTB's team model (see the wiki for migration details).
+With **FTB Teams** as well, unlocks are **team-scoped** via FTB's `TEAM_STAGES`: the whole party shares chapter progress, inventory checks and JEI updates apply for every online member, and `/chapters`, KubeJS `PlayerStages`, and FTB Quests stage rewards all read and write the same team storage. Joining a party merges personal and party stages; leaving keeps a snapshot on the new personal team (see the wiki for migration details).
 
 For branching logic (e.g. only grant if some other condition holds), combine **FTB Quests Custom Reward** with KubeJS. Example: `examples/kubejs/server_scripts/ftbquests_chapter_reward.js` in the GitHub repo.
 
@@ -153,7 +153,7 @@ Built for pack authors who want **one integrated progression layer** on modern N
 ## FTB Library, Teams, and Quests
 
 - With **FTB Library**, Chapters becomes the FTB **stage provider**. **FTB Quests** can use **Stage Reward** (grant a chapter when claimed), **Stage Task** (require a chapter), and **Stage Required** on quests or chapters, using your chapter ids with *no extra registration*.
-- With **FTB Teams** as well, unlocks live on the **team** and are **shared by the whole party**. Inventory checks and JEI updates apply to all online members. Commands, KubeJS **PlayerStages**, and FTB Quests stage rewards all use the same team storage. Joining a team gives that team's stages; *personal progress does not carry over* the same way (see the wiki for migration notes).
+- With **FTB Teams** as well, unlocks live on the **team** and are **shared by the whole party**. Inventory checks and JEI updates apply to all online members. Commands, KubeJS **PlayerStages**, and FTB Quests stage rewards all use the same team storage. Joining a party merges personal and party stages; leaving keeps a snapshot on the personal team (see the wiki for migration notes).
 - For **custom conditions** on rewards, pair **FTB Quests Custom Reward** with KubeJS. Sample: *examples/kubejs/server_scripts/ftbquests_chapter_reward.js* in the GitHub repo.
 
 ## What you can lock

@@ -1,5 +1,6 @@
 package com.gabinx.chapters;
 
+import com.gabinx.chapters.logic.ClientStageView;
 import com.gabinx.chapters.logic.InventoryPlan;
 import com.gabinx.chapters.logic.Restriction;
 import com.gabinx.chapters.logic.RestrictionFlags;
@@ -16,12 +17,16 @@ import java.util.Set;
 
 import static com.gabinx.chapters.TutorialFixtures.DIAMOND;
 import static com.gabinx.chapters.TutorialFixtures.EMERALD;
+import static com.gabinx.chapters.TutorialFixtures.WATER;
 import static com.gabinx.chapters.TutorialFixtures.id;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class RestrictionFlagsTest {
+    private static final ResourceLocation OAK_PLANKS = id("minecraft:oak_planks");
+    private static final ResourceLocation BIRCH_PLANKS = id("minecraft:birch_planks");
+
     @Test
     void stringOnlyJsonKeepsAllFlags() {
         ResourceLocation stage = id("tutorial:flags_default");
@@ -104,6 +109,162 @@ class RestrictionFlagsTest {
     }
 
     @Test
+    void owningJeiFalseStageUnlocksGameplayAndJeiHide() {
+        ResourceLocation stageA = id("tutorial:a_jei");
+        ResourceLocation stageB = id("tutorial:b_nojei");
+
+        JsonObject withJei = new JsonObject();
+        JsonArray itemsA = new JsonArray();
+        itemsA.add(DIAMOND.toString());
+        withJei.add("items", itemsA);
+
+        JsonObject noJei = new JsonObject();
+        JsonObject restrictions = new JsonObject();
+        restrictions.addProperty("jei", false);
+        noJei.add("restrictions", restrictions);
+        JsonArray itemsB = new JsonArray();
+        itemsB.add(DIAMOND.toString());
+        noJei.add("items", itemsB);
+
+        StageBook book = new StageBook(TutorialFixtures.tutorialCatalog());
+        book.replaceDatapack(Map.of(
+                stageA, StageDefinition.fromJson(stageA, withJei),
+                stageB, StageDefinition.fromJson(stageB, noJei)
+        ));
+
+        Set<ResourceLocation> ownedB = Set.of(stageB);
+        assertFalse(book.isItemLocked(DIAMOND, ownedB));
+        assertFalse(book.isItemRestricted(DIAMOND, ownedB, Restriction.JEI));
+        assertFalse(book.isItemRestricted(DIAMOND, ownedB, Restriction.PICKUP));
+
+        Set<ResourceLocation> jeiHidden = ClientStageView.computeFlagRestricted(
+                book.itemStagesIndexView(), book.itemJeiStagesIndexView(), ownedB);
+        assertFalse(jeiHidden.contains(DIAMOND));
+    }
+
+    @Test
+    void multiStageFlagOrWhileLockedUnlocksAllWhenOwningOne() {
+        ResourceLocation stageA = id("tutorial:pickup_only");
+        ResourceLocation stageB = id("tutorial:inventory_only");
+
+        JsonObject pickupOnly = stageRestrictions(true, false, false, false, false, false);
+        JsonArray itemsA = new JsonArray();
+        itemsA.add(DIAMOND.toString());
+        pickupOnly.add("items", itemsA);
+
+        JsonObject inventoryOnly = stageRestrictions(false, true, false, false, false, false);
+        JsonArray itemsB = new JsonArray();
+        itemsB.add(DIAMOND.toString());
+        inventoryOnly.add("items", itemsB);
+
+        StageBook book = new StageBook(TutorialFixtures.tutorialCatalog());
+        book.replaceDatapack(Map.of(
+                stageA, StageDefinition.fromJson(stageA, pickupOnly),
+                stageB, StageDefinition.fromJson(stageB, inventoryOnly)
+        ));
+
+        assertTrue(book.isItemRestricted(DIAMOND, Set.of(), Restriction.PICKUP));
+        assertTrue(book.isItemRestricted(DIAMOND, Set.of(), Restriction.INVENTORY));
+        assertFalse(book.isItemRestricted(DIAMOND, Set.of(stageA), Restriction.PICKUP));
+        assertFalse(book.isItemRestricted(DIAMOND, Set.of(stageA), Restriction.INVENTORY));
+    }
+
+    @Test
+    void explicitEntryOverridesTagFlagsInSameStage() {
+        ResourceLocation stage = id("tutorial:tag_override");
+        JsonObject json = new JsonObject();
+        JsonArray items = new JsonArray();
+        items.add("#minecraft:planks");
+        JsonObject override = new JsonObject();
+        override.addProperty("id", OAK_PLANKS.toString());
+        override.addProperty("pickup", false);
+        items.add(override);
+        json.add("items", items);
+
+        StageBook book = new StageBook(TutorialFixtures.tutorialCatalog());
+        book.replaceDatapack(Map.of(stage, StageDefinition.fromJson(stage, json)));
+
+        assertFalse(book.isItemRestricted(OAK_PLANKS, Set.of(), Restriction.PICKUP));
+        assertTrue(book.isItemRestricted(BIRCH_PLANKS, Set.of(), Restriction.PICKUP));
+        assertTrue(book.isItemLocked(OAK_PLANKS, Set.of()));
+    }
+
+    @Test
+    void transferFalseKeepsFluidInLockIndexButNotTransferIndex() {
+        ResourceLocation stage = id("tutorial:no_transfer");
+        JsonObject json = new JsonObject();
+        JsonObject restrictions = new JsonObject();
+        restrictions.addProperty("transfer", false);
+        json.add("restrictions", restrictions);
+        JsonArray fluids = new JsonArray();
+        fluids.add(WATER.toString());
+        json.add("fluids", fluids);
+
+        StageBook book = new StageBook(TutorialFixtures.tutorialCatalog());
+        book.replaceDatapack(Map.of(stage, StageDefinition.fromJson(stage, json)));
+
+        assertTrue(book.isFluidLocked(WATER, Set.of()));
+        assertFalse(book.isFluidRestricted(WATER, Set.of(), Restriction.TRANSFER));
+        assertFalse(book.fluidTransferStagesIndexView().containsKey(WATER));
+    }
+
+    @Test
+    void travelFalseAllowsDimensionTravelWhileStillLocked() {
+        ResourceLocation stage = id("tutorial:no_travel");
+        ResourceLocation nether = id("minecraft:the_nether");
+        JsonObject json = new JsonObject();
+        JsonObject restrictions = new JsonObject();
+        restrictions.addProperty("travel", false);
+        json.add("restrictions", restrictions);
+        JsonArray dimensions = new JsonArray();
+        dimensions.add(nether.toString());
+        json.add("dimensions", dimensions);
+
+        StageBook book = new StageBook(TutorialFixtures.tutorialCatalog());
+        book.replaceDatapack(Map.of(stage, StageDefinition.fromJson(stage, json)));
+
+        assertTrue(book.isDimensionLocked(nether, Set.of()));
+        assertFalse(book.isDimensionRestricted(nether, Set.of(), Restriction.TRAVEL));
+    }
+
+    @Test
+    void allFlagsFalseStillDefinesUnlockKey() {
+        ResourceLocation soft = id("tutorial:soft");
+        ResourceLocation hard = id("tutorial:hard");
+
+        JsonObject softJson = stageRestrictions(false, false, false, false, false, false);
+        JsonArray softItems = new JsonArray();
+        softItems.add(DIAMOND.toString());
+        softJson.add("items", softItems);
+
+        JsonObject hardJson = new JsonObject();
+        JsonArray hardItems = new JsonArray();
+        hardItems.add(DIAMOND.toString());
+        hardJson.add("items", hardItems);
+
+        StageBook softOnly = new StageBook(TutorialFixtures.tutorialCatalog());
+        softOnly.replaceDatapack(Map.of(soft, StageDefinition.fromJson(soft, softJson)));
+        assertTrue(softOnly.isItemLocked(DIAMOND, Set.of()));
+        assertFalse(softOnly.isItemRestricted(DIAMOND, Set.of(), Restriction.PICKUP));
+        assertFalse(softOnly.itemJeiStagesIndexView().containsKey(DIAMOND));
+
+        StageBook book = new StageBook(TutorialFixtures.tutorialCatalog());
+        book.replaceDatapack(Map.of(
+                soft, StageDefinition.fromJson(soft, softJson),
+                hard, StageDefinition.fromJson(hard, hardJson)
+        ));
+
+        assertTrue(book.isItemLocked(DIAMOND, Set.of()));
+        assertTrue(book.isItemRestricted(DIAMOND, Set.of(), Restriction.PICKUP));
+        assertTrue(book.itemStagesIndexView().get(DIAMOND).contains(soft));
+        assertTrue(book.itemJeiStagesIndexView().get(DIAMOND).contains(hard));
+        assertFalse(book.itemJeiStagesIndexView().get(DIAMOND).contains(soft));
+
+        assertFalse(book.isItemLocked(DIAMOND, Set.of(soft)));
+        assertFalse(book.isItemRestricted(DIAMOND, Set.of(soft), Restriction.PICKUP));
+    }
+
+    @Test
     void stageDefaultsApplyToStringEntries() {
         ResourceLocation stage = id("tutorial:defaults");
         JsonObject json = new JsonObject();
@@ -121,5 +282,25 @@ class RestrictionFlagsTest {
         assertFalse(flags.craft());
         assertTrue(flags.inventory());
         assertTrue(flags.jei());
+    }
+
+    private static JsonObject stageRestrictions(
+            boolean pickup,
+            boolean inventory,
+            boolean craft,
+            boolean jei,
+            boolean transfer,
+            boolean travel
+    ) {
+        JsonObject json = new JsonObject();
+        JsonObject restrictions = new JsonObject();
+        restrictions.addProperty("pickup", pickup);
+        restrictions.addProperty("inventory", inventory);
+        restrictions.addProperty("craft", craft);
+        restrictions.addProperty("jei", jei);
+        restrictions.addProperty("transfer", transfer);
+        restrictions.addProperty("travel", travel);
+        json.add("restrictions", restrictions);
+        return json;
     }
 }

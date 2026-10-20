@@ -1,4 +1,4 @@
-**Chapters** is a progression mod for NeoForge. You gate **items, fluids, Mekanism chemicals**, **recipes by id**, and **dimensions** behind named *chapters* (stages) using **datapacks** and optionally **KubeJS**, with optional **JEI** so players only see what they can use.
+**Chapters** is a progression mod for NeoForge. You gate **items, fluids, Mekanism chemicals**, **recipes by id**, and **dimensions** behind named *chapters* (stages). **KubeJS** is the preferred authoring path; datapacks remain supported. Optional **JEI** filters what players see. Per-stage **restriction flags** (`pickup`, `inventory`, `craft`, `jei`, `transfer`, `travel`) let you soft-gate content.
 
 | Minecraft | Chapters jar | Java |
 | --- | --- | --- |
@@ -18,31 +18,30 @@ All require permission level as usual for multiplayer.
 | `/chapters remove <player> <stage>` | Revokes it |
 | `/chapters list <player>` | Lists that player’s current stages |
 | `/chapters check <player> <stage>` | `true` / `false` |
-| `/chapters reload` | Reloads stage **definitions** (after datapack or script edits that affect gates) |
+| `/chapters reload` | Reloads stage **definitions** (after script or datapack edits that affect gates) |
 
 ## Getting started as a pack author
 
-1. Define stages in **datapack JSON** under `data/<namespace>/chapters/stages/` and/or with **KubeJS**. See [[Stages-datapack]] and [[KubeJS]].
-2. Run **`/reload`** after changing datapacks (operator).
-3. KubeJS: stage definitions typically apply on **`ServerEvents.loaded`**; reloading behaviour follows your usual KubeJS/server restart habits.
-4. Grant progression with **`/chapters add`** or **`PlayerStages.of(player).add(...)`** from quests, advancements, etc. See [[Examples]].
+1. **Preferred:** define stages with **KubeJS** (`ChaptersEvents.defineStage` in `ServerEvents.loaded`). See [[KubeJS]] and [[Restriction-flags]].
+2. Grant progression with **`PlayerStages.of(player).add(...)`** from quests / scripts, or **`/chapters add`**. See [[Examples]].
+3. Optional: ship the same stages as **datapack JSON** under `data/<namespace>/chapters/stages/` if you need a script-free pack ([[Stages-datapack]]); run **`/reload`** after JSON changes.
+4. Optional: FTB Quests Stage Reward / Tasks and team sharing: [[FTB-integration]].
 
 ## Wiki pages
 
 | Page | Purpose |
 | --- | --- |
-| [[Stages-datapack]] | Where to put JSON, keys, `#` tags, `@mods` |
-| [[KubeJS]] | `defineStage`, `fluid:`, `recipe:`, `dimension:`, `PlayerStages` |
-| [[Examples]] | Copy-paste setups (tiers, fluids, recipes, Mekanism) |
-| [[FTB-integration]] | FTB Library / FTB Teams / FTB Quests (Stage Reward, team-wide unlocks) |
-| [[JEI-and-limitations]] | What JEI hides and what crafting is blocked |
-| [[Troubleshooting]] | datapack not applying, conflicting stages, JEI quirks, KubeJS crash |
+| [[KubeJS]] | **Start here** — `defineStage`, prefixes, `PlayerStages`, flags in scripts |
+| [[Restriction-flags]] | `pickup` / `inventory` / `craft` / `jei` / `transfer` / `travel`, overrides, recipes |
+| [[Examples]] | Copy-paste KubeJS setups (tiers, fluids, recipes, granular flags) |
+| [[FTB-integration]] | FTB Library / Teams / Quests, `syncWithFtbTeams`, party merge |
+| [[JEI-and-limitations]] | JEI hide vs gameplay flags, crafting limits |
+| [[Stages-datapack]] | Datapack JSON layout (optional alternative to KubeJS) |
+| [[Troubleshooting]] | Scripts, flags, multi-stage, JEI sync, FTB party |
 
 ### Sample packs
 
-Copy a **tutorial datapack** and **KubeJS snippets** from GitHub:
+- **KubeJS first:** [examples/kubejs on `26`](https://github.com/GabinFqt/chapters/tree/26/examples/kubejs) · [on `main`](https://github.com/GabinFqt/chapters/tree/main/examples/kubejs)
+- Optional datapack twin: [examples/datapack on `26`](https://github.com/GabinFqt/chapters/tree/26/examples/datapack) · [on `main`](https://github.com/GabinFqt/chapters/tree/main/examples/datapack)
 
-- Minecraft **26**: [examples on branch `26`](https://github.com/GabinFqt/chapters/tree/26/examples)
-- Minecraft **1.21**: [examples on `main`](https://github.com/GabinFqt/chapters/tree/main/examples)
-
-Grab the matching jar from Releases, then paste the samples into your world or modpack workspace.
+Grab the matching jar from Releases, then paste the samples into your modpack workspace.

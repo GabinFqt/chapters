@@ -47,6 +47,9 @@ public final class StageBook {
     private Map<Identifier, Set<Identifier>> chemicalJeiStagesIndex = Map.of();
     private Map<Identifier, Set<Identifier>> recipeJeiStagesIndex = Map.of();
 
+    private Map<Identifier, Set<Identifier>> fluidTransferStagesIndex = Map.of();
+    private Map<Identifier, Set<Identifier>> chemicalTransferStagesIndex = Map.of();
+
     public StageBook(ContentCatalog catalog) {
         this.catalog = Objects.requireNonNull(catalog, "catalog");
     }
@@ -94,64 +97,65 @@ public final class StageBook {
 
         for (StageDefinition def : mergedDefinitions) {
             Identifier stageId = def.id();
-            for (Map.Entry<Identifier, RestrictionFlags> e : def.items().entrySet()) {
-                putEdge(itemMap, e.getKey(), stageId, e.getValue());
-            }
+            // Tags / namespaces first (OR within the stage), then explicit ids replace for that stage.
             for (Map.Entry<TagKey<Item>, RestrictionFlags> e : def.tags().entrySet()) {
                 for (Identifier itemId : catalog.itemsInTag(e.getKey().location())) {
-                    putEdge(itemMap, itemId, stageId, e.getValue());
+                    putEdgeOr(itemMap, itemId, stageId, e.getValue());
                 }
             }
             for (Map.Entry<String, RestrictionFlags> e : def.namespaces().entrySet()) {
                 for (Identifier itemId : catalog.itemsInNamespace(e.getKey())) {
-                    putEdge(itemMap, itemId, stageId, e.getValue());
+                    putEdgeOr(itemMap, itemId, stageId, e.getValue());
                 }
             }
-
-            for (Map.Entry<Identifier, RestrictionFlags> e : def.fluids().entrySet()) {
-                putEdge(fluidMap, e.getKey(), stageId, e.getValue());
+            for (Map.Entry<Identifier, RestrictionFlags> e : def.items().entrySet()) {
+                putEdgeReplace(itemMap, e.getKey(), stageId, e.getValue());
             }
+
             for (Map.Entry<TagKey<Fluid>, RestrictionFlags> e : def.fluidTags().entrySet()) {
                 for (Identifier fluidId : catalog.fluidsInTag(e.getKey().location())) {
-                    putEdge(fluidMap, fluidId, stageId, e.getValue());
+                    putEdgeOr(fluidMap, fluidId, stageId, e.getValue());
                 }
             }
             for (Map.Entry<String, RestrictionFlags> e : def.fluidNamespaces().entrySet()) {
                 for (Identifier fluidId : catalog.fluidsInNamespace(e.getKey())) {
-                    putEdge(fluidMap, fluidId, stageId, e.getValue());
+                    putEdgeOr(fluidMap, fluidId, stageId, e.getValue());
                 }
             }
-
-            for (Map.Entry<Identifier, RestrictionFlags> e : def.chemicals().entrySet()) {
-                putEdge(chemicalMap, e.getKey(), stageId, e.getValue());
+            for (Map.Entry<Identifier, RestrictionFlags> e : def.fluids().entrySet()) {
+                putEdgeReplace(fluidMap, e.getKey(), stageId, e.getValue());
             }
+
             for (Map.Entry<Identifier, RestrictionFlags> e : def.chemicalTags().entrySet()) {
                 for (Identifier chemicalId : catalog.chemicalsInTag(e.getKey())) {
-                    putEdge(chemicalMap, chemicalId, stageId, e.getValue());
+                    putEdgeOr(chemicalMap, chemicalId, stageId, e.getValue());
                 }
             }
             for (Map.Entry<String, RestrictionFlags> e : def.chemicalNamespaces().entrySet()) {
                 for (Identifier chemicalId : catalog.chemicalsInNamespace(e.getKey())) {
-                    putEdge(chemicalMap, chemicalId, stageId, e.getValue());
+                    putEdgeOr(chemicalMap, chemicalId, stageId, e.getValue());
                 }
+            }
+            for (Map.Entry<Identifier, RestrictionFlags> e : def.chemicals().entrySet()) {
+                putEdgeReplace(chemicalMap, e.getKey(), stageId, e.getValue());
             }
 
             for (Map.Entry<Identifier, RestrictionFlags> e : def.recipes().entrySet()) {
-                putEdge(recipeMap, e.getKey(), stageId, e.getValue());
+                putEdgeOr(recipeMap, e.getKey(), stageId, e.getValue());
             }
 
-            for (Map.Entry<Identifier, RestrictionFlags> e : def.dimensions().entrySet()) {
-                putEdge(dimensionMap, e.getKey(), stageId, e.getValue());
-            }
             for (Map.Entry<Identifier, RestrictionFlags> e : def.dimensionTags().entrySet()) {
                 for (Identifier dimensionId : catalog.dimensionsInTag(e.getKey())) {
-                    putEdge(dimensionMap, dimensionId, stageId, e.getValue());
+                    putEdgeOr(dimensionMap, dimensionId, stageId, e.getValue());
                 }
             }
             for (Map.Entry<String, RestrictionFlags> e : def.dimensionNamespaces().entrySet()) {
                 for (Identifier dimensionId : catalog.dimensionsInNamespace(e.getKey())) {
-                    putEdge(dimensionMap, dimensionId, stageId, e.getValue());
+                    putEdgeOr(dimensionMap, dimensionId, stageId, e.getValue());
                 }
+            }
+            for (Map.Entry<Identifier, RestrictionFlags> e : def.dimensions().entrySet()) {
+                putEdgeReplace(dimensionMap, e.getKey(), stageId, e.getValue());
             }
         }
 
@@ -167,13 +171,17 @@ public final class StageBook {
         recipeStagesIndex = stageIndexFrom(recipeEdges);
         dimensionStagesIndex = stageIndexFrom(dimensionEdges);
 
-        itemJeiStagesIndex = jeiIndexFrom(itemEdges);
-        fluidJeiStagesIndex = jeiIndexFrom(fluidEdges);
-        chemicalJeiStagesIndex = jeiIndexFrom(chemicalEdges);
-        recipeJeiStagesIndex = jeiIndexFrom(recipeEdges);
+        itemJeiStagesIndex = flagIndexFrom(itemEdges, Restriction.JEI);
+        fluidJeiStagesIndex = flagIndexFrom(fluidEdges, Restriction.JEI);
+        chemicalJeiStagesIndex = flagIndexFrom(chemicalEdges, Restriction.JEI);
+        recipeJeiStagesIndex = flagIndexFrom(recipeEdges, Restriction.JEI);
+
+        fluidTransferStagesIndex = flagIndexFrom(fluidEdges, Restriction.TRANSFER);
+        chemicalTransferStagesIndex = flagIndexFrom(chemicalEdges, Restriction.TRANSFER);
     }
 
-    private static void putEdge(
+    /** OR-merge flags for the same stage (tag / namespace expansions). */
+    private static void putEdgeOr(
             Map<Identifier, Map<Identifier, RestrictionFlags>> map,
             Identifier contentId,
             Identifier stageId,
@@ -181,6 +189,17 @@ public final class StageBook {
     ) {
         RestrictionFlags f = flags == null ? RestrictionFlags.ALL : flags;
         map.computeIfAbsent(contentId, k -> new LinkedHashMap<>()).merge(stageId, f, RestrictionFlags::or);
+    }
+
+    /** Explicit id replaces any prior flags for this stage (overrides tag / namespace). */
+    private static void putEdgeReplace(
+            Map<Identifier, Map<Identifier, RestrictionFlags>> map,
+            Identifier contentId,
+            Identifier stageId,
+            RestrictionFlags flags
+    ) {
+        RestrictionFlags f = flags == null ? RestrictionFlags.ALL : flags;
+        map.computeIfAbsent(contentId, k -> new LinkedHashMap<>()).put(stageId, f);
     }
 
     public synchronized Map<Identifier, Set<Identifier>> itemStagesIndexView() {
@@ -217,6 +236,14 @@ public final class StageBook {
 
     public synchronized Map<Identifier, Set<Identifier>> recipeJeiStagesIndexView() {
         return recipeJeiStagesIndex;
+    }
+
+    public synchronized Map<Identifier, Set<Identifier>> fluidTransferStagesIndexView() {
+        return fluidTransferStagesIndex;
+    }
+
+    public synchronized Map<Identifier, Set<Identifier>> chemicalTransferStagesIndexView() {
+        return chemicalTransferStagesIndex;
     }
 
     public synchronized Map<Identifier, StageDefinition> allDefinitions() {
@@ -365,17 +392,18 @@ public final class StageBook {
         return Collections.unmodifiableMap(out);
     }
 
-    private static Map<Identifier, Set<Identifier>> jeiIndexFrom(
-            Map<Identifier, Map<Identifier, RestrictionFlags>> edges
+    private static Map<Identifier, Set<Identifier>> flagIndexFrom(
+            Map<Identifier, Map<Identifier, RestrictionFlags>> edges,
+            Restriction restriction
     ) {
-        if (edges.isEmpty()) {
+        if (edges.isEmpty() || restriction == null) {
             return Map.of();
         }
         Map<Identifier, Set<Identifier>> out = new LinkedHashMap<>();
         for (Map.Entry<Identifier, Map<Identifier, RestrictionFlags>> e : edges.entrySet()) {
             LinkedHashSet<Identifier> stages = new LinkedHashSet<>();
             for (Map.Entry<Identifier, RestrictionFlags> edge : e.getValue().entrySet()) {
-                if (edge.getValue() != null && edge.getValue().jei()) {
+                if (edge.getValue() != null && edge.getValue().allows(restriction)) {
                     stages.add(edge.getKey());
                 }
             }

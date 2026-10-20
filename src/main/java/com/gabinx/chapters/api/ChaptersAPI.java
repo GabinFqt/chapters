@@ -86,7 +86,9 @@ public final class ChaptersAPI {
                 mgr.book().itemJeiStagesIndexView(),
                 mgr.book().fluidJeiStagesIndexView(),
                 mgr.book().chemicalJeiStagesIndexView(),
-                mgr.book().recipeJeiStagesIndexView()
+                mgr.book().recipeJeiStagesIndexView(),
+                mgr.book().fluidTransferStagesIndexView(),
+                mgr.book().chemicalTransferStagesIndexView()
         );
     }
 }

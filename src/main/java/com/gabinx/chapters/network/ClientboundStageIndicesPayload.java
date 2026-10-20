@@ -15,7 +15,7 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * Server-to-client payload carrying lock indices plus JEI-filtered indices.
+ * Server-to-client payload carrying lock indices, JEI-filtered indices, and transfer-filtered fluid/chemical indices.
  */
 public record ClientboundStageIndicesPayload(
         Map<Identifier, Set<Identifier>> itemStages,
@@ -25,7 +25,9 @@ public record ClientboundStageIndicesPayload(
         Map<Identifier, Set<Identifier>> itemJeiStages,
         Map<Identifier, Set<Identifier>> fluidJeiStages,
         Map<Identifier, Set<Identifier>> chemicalJeiStages,
-        Map<Identifier, Set<Identifier>> recipeJeiStages
+        Map<Identifier, Set<Identifier>> recipeJeiStages,
+        Map<Identifier, Set<Identifier>> fluidTransferStages,
+        Map<Identifier, Set<Identifier>> chemicalTransferStages
 ) implements CustomPacketPayload {
 
     public ClientboundStageIndicesPayload {
@@ -37,6 +39,8 @@ public record ClientboundStageIndicesPayload(
         fluidJeiStages = Map.copyOf(fluidJeiStages);
         chemicalJeiStages = Map.copyOf(chemicalJeiStages);
         recipeJeiStages = Map.copyOf(recipeJeiStages);
+        fluidTransferStages = Map.copyOf(fluidTransferStages);
+        chemicalTransferStages = Map.copyOf(chemicalTransferStages);
     }
 
     public static final Type<ClientboundStageIndicesPayload> TYPE =
@@ -59,10 +63,14 @@ public record ClientboundStageIndicesPayload(
         writeMap(buf, payload.fluidJeiStages);
         writeMap(buf, payload.chemicalJeiStages);
         writeMap(buf, payload.recipeJeiStages);
+        writeMap(buf, payload.fluidTransferStages);
+        writeMap(buf, payload.chemicalTransferStages);
     }
 
     private static ClientboundStageIndicesPayload read(RegistryFriendlyByteBuf buf) {
         return new ClientboundStageIndicesPayload(
+                readMap(buf),
+                readMap(buf),
                 readMap(buf),
                 readMap(buf),
                 readMap(buf),
@@ -109,7 +117,9 @@ public record ClientboundStageIndicesPayload(
                     payload.itemJeiStages,
                     payload.fluidJeiStages,
                     payload.chemicalJeiStages,
-                    payload.recipeJeiStages
+                    payload.recipeJeiStages,
+                    payload.fluidTransferStages,
+                    payload.chemicalTransferStages
             );
             RecipeViewerCompat.refresh();
         });

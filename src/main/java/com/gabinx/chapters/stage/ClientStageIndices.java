@@ -44,6 +44,31 @@ public final class ClientStageIndices {
                 nextRecipeJei);
     }
 
+    public static synchronized void replace(
+            Map<Identifier, Set<Identifier>> nextItems,
+            Map<Identifier, Set<Identifier>> nextFluids,
+            Map<Identifier, Set<Identifier>> nextChemicals,
+            Map<Identifier, Set<Identifier>> nextRecipes,
+            Map<Identifier, Set<Identifier>> nextItemJei,
+            Map<Identifier, Set<Identifier>> nextFluidJei,
+            Map<Identifier, Set<Identifier>> nextChemicalJei,
+            Map<Identifier, Set<Identifier>> nextRecipeJei,
+            Map<Identifier, Set<Identifier>> nextFluidTransfer,
+            Map<Identifier, Set<Identifier>> nextChemicalTransfer
+    ) {
+        ClientStageMirror.VIEW.replaceIndices(
+                nextItems,
+                nextFluids,
+                nextChemicals,
+                nextRecipes,
+                nextItemJei,
+                nextFluidJei,
+                nextChemicalJei,
+                nextRecipeJei,
+                nextFluidTransfer,
+                nextChemicalTransfer);
+    }
+
     public static Map<Identifier, Set<Identifier>> itemsView() {
         return ClientStageMirror.VIEW.itemsView();
     }
@@ -74,5 +99,13 @@ public final class ClientStageIndices {
 
     public static Map<Identifier, Set<Identifier>> recipeJeiView() {
         return ClientStageMirror.VIEW.recipeJeiView();
+    }
+
+    public static Map<Identifier, Set<Identifier>> fluidTransferView() {
+        return ClientStageMirror.VIEW.fluidTransferView();
+    }
+
+    public static Map<Identifier, Set<Identifier>> chemicalTransferView() {
+        return ClientStageMirror.VIEW.chemicalTransferView();
     }
 }

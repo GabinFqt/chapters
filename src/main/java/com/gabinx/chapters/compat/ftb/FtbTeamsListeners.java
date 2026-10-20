@@ -38,6 +38,9 @@ final class FtbTeamsListeners {
     }
 
     private static void onPropertiesChanged(TeamPropertiesChangedEvent event) {
+        if (!EffectiveStages.useTeamStages()) {
+            return;
+        }
         Team team = event.getTeam();
         if (team == null || team.isClientTeam()) {
             return;
@@ -51,6 +54,9 @@ final class FtbTeamsListeners {
     }
 
     private static void onPlayerChangedTeam(PlayerChangedTeamEvent event) {
+        if (!EffectiveStages.useTeamStages()) {
+            return;
+        }
         ServerPlayer player = event.getPlayer();
         if (player == null) {
             return;
@@ -67,6 +73,9 @@ final class FtbTeamsListeners {
      * personal stages into a shared party.
      */
     private static void onPlayerLoggedIn(PlayerLoggedInAfterTeamEvent event) {
+        if (!EffectiveStages.useTeamStages()) {
+            return;
+        }
         ServerPlayer player = event.getPlayer();
         if (player == null) {
             return;

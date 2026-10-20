@@ -17,6 +17,10 @@ public final class ClientStageView {
     private Map<ResourceLocation, Set<ResourceLocation>> fluids = Map.of();
     private Map<ResourceLocation, Set<ResourceLocation>> chemicals = Map.of();
     private Map<ResourceLocation, Set<ResourceLocation>> recipes = Map.of();
+    private Map<ResourceLocation, Set<ResourceLocation>> itemJei = Map.of();
+    private Map<ResourceLocation, Set<ResourceLocation>> fluidJei = Map.of();
+    private Map<ResourceLocation, Set<ResourceLocation>> chemicalJei = Map.of();
+    private Map<ResourceLocation, Set<ResourceLocation>> recipeJei = Map.of();
 
     public synchronized void setStages(Set<ResourceLocation> next) {
         stages.clear();
@@ -43,10 +47,35 @@ public final class ClientStageView {
             Map<ResourceLocation, Set<ResourceLocation>> nextChemicals,
             Map<ResourceLocation, Set<ResourceLocation>> nextRecipes
     ) {
+        replaceIndices(
+                nextItems,
+                nextFluids,
+                nextChemicals,
+                nextRecipes,
+                nextItems,
+                nextFluids,
+                nextChemicals,
+                nextRecipes);
+    }
+
+    public synchronized void replaceIndices(
+            Map<ResourceLocation, Set<ResourceLocation>> nextItems,
+            Map<ResourceLocation, Set<ResourceLocation>> nextFluids,
+            Map<ResourceLocation, Set<ResourceLocation>> nextChemicals,
+            Map<ResourceLocation, Set<ResourceLocation>> nextRecipes,
+            Map<ResourceLocation, Set<ResourceLocation>> nextItemJei,
+            Map<ResourceLocation, Set<ResourceLocation>> nextFluidJei,
+            Map<ResourceLocation, Set<ResourceLocation>> nextChemicalJei,
+            Map<ResourceLocation, Set<ResourceLocation>> nextRecipeJei
+    ) {
         items = freeze(nextItems);
         fluids = freeze(nextFluids);
         chemicals = freeze(nextChemicals);
         recipes = freeze(nextRecipes);
+        itemJei = freeze(nextItemJei);
+        fluidJei = freeze(nextFluidJei);
+        chemicalJei = freeze(nextChemicalJei);
+        recipeJei = freeze(nextRecipeJei);
     }
 
     public synchronized Map<ResourceLocation, Set<ResourceLocation>> itemsView() {
@@ -63,6 +92,22 @@ public final class ClientStageView {
 
     public synchronized Map<ResourceLocation, Set<ResourceLocation>> recipesView() {
         return recipes;
+    }
+
+    public synchronized Map<ResourceLocation, Set<ResourceLocation>> itemJeiView() {
+        return itemJei;
+    }
+
+    public synchronized Map<ResourceLocation, Set<ResourceLocation>> fluidJeiView() {
+        return fluidJei;
+    }
+
+    public synchronized Map<ResourceLocation, Set<ResourceLocation>> chemicalJeiView() {
+        return chemicalJei;
+    }
+
+    public synchronized Map<ResourceLocation, Set<ResourceLocation>> recipeJeiView() {
+        return recipeJei;
     }
 
     public synchronized Set<ResourceLocation> lockedFluidIds() {

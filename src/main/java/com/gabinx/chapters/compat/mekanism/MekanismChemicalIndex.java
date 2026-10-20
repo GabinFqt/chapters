@@ -56,15 +56,15 @@ public final class MekanismChemicalIndex {
     public static Map<ResourceLocation, Set<ResourceLocation>> buildIndex(List<StageDefinition> mergedDefinitions) {
         Map<ResourceLocation, Set<ResourceLocation>> chemicalMap = new HashMap<>();
         for (StageDefinition def : mergedDefinitions) {
-            for (ResourceLocation chemicalId : def.chemicals()) {
+            for (ResourceLocation chemicalId : def.chemicals().keySet()) {
                 chemicalMap.computeIfAbsent(chemicalId, k -> new LinkedHashSet<>()).add(def.id());
             }
-            for (ResourceLocation tagId : def.chemicalTags()) {
+            for (ResourceLocation tagId : def.chemicalTags().keySet()) {
                 for (ResourceLocation key : chemicalsInTag(tagId)) {
                     chemicalMap.computeIfAbsent(key, k -> new LinkedHashSet<>()).add(def.id());
                 }
             }
-            for (String ns : def.chemicalNamespaces()) {
+            for (String ns : def.chemicalNamespaces().keySet()) {
                 for (ResourceLocation key : chemicalsInNamespace(ns)) {
                     chemicalMap.computeIfAbsent(key, k -> new LinkedHashSet<>()).add(def.id());
                 }

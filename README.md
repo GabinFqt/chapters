@@ -130,7 +130,7 @@ When **FTB Teams** is also installed, every chapter unlock is **team-scoped** �
 - When a player **joins** a party they adopt the party's stages; their previous personal-team unlocks are not carried over.
 - The very first time a player logs in after FTB Teams is added on top of an existing world, any pre-existing per-player unlocks on their personal team are migrated upward (party teams are skipped to avoid leaking personal stages).
 
-The integration is fully transparent for `/chapters add/remove`, `PlayerStages.of(player)` from KubeJS, and any other call site — they all route through the same team-aware path. No config flags, no commands to enable. If FTB Teams is absent the existing per-player attachment is used unchanged.
+The integration is fully transparent for `/chapters add/remove`, `PlayerStages.of(player)` from KubeJS, and any other call site — they all route through the same team-aware path. Team sync is on by default when FTB Teams is present; set `syncWithFtbTeams = false` in `config/chapters-common.toml` to keep per-player attachment storage (standalone) even with FTB Teams installed. FTB Library / Quests Stage Reward and Stage Task still work either way. If FTB Teams is absent the existing per-player attachment is used unchanged.
 
 For more advanced reward flows (e.g. granting a chapter conditionally), pair FTB Quests' **Custom Reward** with KubeJS — see [`examples/kubejs/server_scripts/ftbquests_chapter_reward.js`](examples/kubejs/server_scripts/ftbquests_chapter_reward.js).
 

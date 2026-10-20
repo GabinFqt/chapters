@@ -1,3 +1,11 @@
+# Chapters 1.3 (unreleased)
+
+## Changes
+- **Restriction flags**: optional `restrictions` object and per-entry overrides (`jei`, `pickup`, `inventory`, `craft`, `transfer`, `travel`) on datapack / KubeJS stages. Defaults stay fully enforced for legacy JSON.
+- **FTB Teams config**: `config/chapters-common.toml` → `syncWithFtbTeams` (default `true`); set `false` for standalone per-player stages while FTB Teams is installed.
+
+---
+
 # Chapters 1.2
 
 ## Changes

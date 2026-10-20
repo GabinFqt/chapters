@@ -28,11 +28,24 @@ public final class StageBook {
     private final Map<ResourceLocation, StageDefinition> runtimeDefinitions = new LinkedHashMap<>();
 
     private List<StageDefinition> mergedDefinitions = List.of();
+
+    /** contentId → (stageId → flags) */
+    private Map<ResourceLocation, Map<ResourceLocation, RestrictionFlags>> itemEdges = Map.of();
+    private Map<ResourceLocation, Map<ResourceLocation, RestrictionFlags>> fluidEdges = Map.of();
+    private Map<ResourceLocation, Map<ResourceLocation, RestrictionFlags>> chemicalEdges = Map.of();
+    private Map<ResourceLocation, Map<ResourceLocation, RestrictionFlags>> recipeEdges = Map.of();
+    private Map<ResourceLocation, Map<ResourceLocation, RestrictionFlags>> dimensionEdges = Map.of();
+
     private Map<ResourceLocation, Set<ResourceLocation>> itemStagesIndex = Map.of();
     private Map<ResourceLocation, Set<ResourceLocation>> fluidStagesIndex = Map.of();
     private Map<ResourceLocation, Set<ResourceLocation>> chemicalStagesIndex = Map.of();
     private Map<ResourceLocation, Set<ResourceLocation>> recipeStagesIndex = Map.of();
     private Map<ResourceLocation, Set<ResourceLocation>> dimensionStagesIndex = Map.of();
+
+    private Map<ResourceLocation, Set<ResourceLocation>> itemJeiStagesIndex = Map.of();
+    private Map<ResourceLocation, Set<ResourceLocation>> fluidJeiStagesIndex = Map.of();
+    private Map<ResourceLocation, Set<ResourceLocation>> chemicalJeiStagesIndex = Map.of();
+    private Map<ResourceLocation, Set<ResourceLocation>> recipeJeiStagesIndex = Map.of();
 
     public StageBook(ContentCatalog catalog) {
         this.catalog = Objects.requireNonNull(catalog, "catalog");
@@ -73,79 +86,101 @@ public final class StageBook {
         merged.putAll(runtimeDefinitions);
         mergedDefinitions = List.copyOf(merged.values());
 
-        Map<ResourceLocation, Set<ResourceLocation>> itemMap = new HashMap<>();
-        Map<ResourceLocation, Set<ResourceLocation>> fluidMap = new HashMap<>();
-        Map<ResourceLocation, Set<ResourceLocation>> chemicalMap = new HashMap<>();
-        Map<ResourceLocation, Set<ResourceLocation>> recipeMap = new HashMap<>();
-        Map<ResourceLocation, Set<ResourceLocation>> dimensionMap = new HashMap<>();
+        Map<ResourceLocation, Map<ResourceLocation, RestrictionFlags>> itemMap = new HashMap<>();
+        Map<ResourceLocation, Map<ResourceLocation, RestrictionFlags>> fluidMap = new HashMap<>();
+        Map<ResourceLocation, Map<ResourceLocation, RestrictionFlags>> chemicalMap = new HashMap<>();
+        Map<ResourceLocation, Map<ResourceLocation, RestrictionFlags>> recipeMap = new HashMap<>();
+        Map<ResourceLocation, Map<ResourceLocation, RestrictionFlags>> dimensionMap = new HashMap<>();
 
         for (StageDefinition def : mergedDefinitions) {
-            for (ResourceLocation itemId : def.items()) {
-                itemMap.computeIfAbsent(itemId, k -> new LinkedHashSet<>()).add(def.id());
+            ResourceLocation stageId = def.id();
+            for (Map.Entry<ResourceLocation, RestrictionFlags> e : def.items().entrySet()) {
+                putEdge(itemMap, e.getKey(), stageId, e.getValue());
             }
-            for (TagKey<Item> tag : def.tags()) {
-                for (ResourceLocation itemId : catalog.itemsInTag(tag.location())) {
-                    itemMap.computeIfAbsent(itemId, k -> new LinkedHashSet<>()).add(def.id());
+            for (Map.Entry<TagKey<Item>, RestrictionFlags> e : def.tags().entrySet()) {
+                for (ResourceLocation itemId : catalog.itemsInTag(e.getKey().location())) {
+                    putEdge(itemMap, itemId, stageId, e.getValue());
                 }
             }
-            for (String ns : def.namespaces()) {
-                for (ResourceLocation itemId : catalog.itemsInNamespace(ns)) {
-                    itemMap.computeIfAbsent(itemId, k -> new LinkedHashSet<>()).add(def.id());
-                }
-            }
-
-            for (ResourceLocation fluidId : def.fluids()) {
-                fluidMap.computeIfAbsent(fluidId, k -> new LinkedHashSet<>()).add(def.id());
-            }
-            for (TagKey<Fluid> tag : def.fluidTags()) {
-                for (ResourceLocation fluidId : catalog.fluidsInTag(tag.location())) {
-                    fluidMap.computeIfAbsent(fluidId, k -> new LinkedHashSet<>()).add(def.id());
-                }
-            }
-            for (String ns : def.fluidNamespaces()) {
-                for (ResourceLocation fluidId : catalog.fluidsInNamespace(ns)) {
-                    fluidMap.computeIfAbsent(fluidId, k -> new LinkedHashSet<>()).add(def.id());
+            for (Map.Entry<String, RestrictionFlags> e : def.namespaces().entrySet()) {
+                for (ResourceLocation itemId : catalog.itemsInNamespace(e.getKey())) {
+                    putEdge(itemMap, itemId, stageId, e.getValue());
                 }
             }
 
-            for (ResourceLocation chemicalId : def.chemicals()) {
-                chemicalMap.computeIfAbsent(chemicalId, k -> new LinkedHashSet<>()).add(def.id());
+            for (Map.Entry<ResourceLocation, RestrictionFlags> e : def.fluids().entrySet()) {
+                putEdge(fluidMap, e.getKey(), stageId, e.getValue());
             }
-            for (ResourceLocation tagId : def.chemicalTags()) {
-                for (ResourceLocation chemicalId : catalog.chemicalsInTag(tagId)) {
-                    chemicalMap.computeIfAbsent(chemicalId, k -> new LinkedHashSet<>()).add(def.id());
+            for (Map.Entry<TagKey<Fluid>, RestrictionFlags> e : def.fluidTags().entrySet()) {
+                for (ResourceLocation fluidId : catalog.fluidsInTag(e.getKey().location())) {
+                    putEdge(fluidMap, fluidId, stageId, e.getValue());
                 }
             }
-            for (String ns : def.chemicalNamespaces()) {
-                for (ResourceLocation chemicalId : catalog.chemicalsInNamespace(ns)) {
-                    chemicalMap.computeIfAbsent(chemicalId, k -> new LinkedHashSet<>()).add(def.id());
+            for (Map.Entry<String, RestrictionFlags> e : def.fluidNamespaces().entrySet()) {
+                for (ResourceLocation fluidId : catalog.fluidsInNamespace(e.getKey())) {
+                    putEdge(fluidMap, fluidId, stageId, e.getValue());
                 }
             }
 
-            for (ResourceLocation recipeId : def.recipes()) {
-                recipeMap.computeIfAbsent(recipeId, k -> new LinkedHashSet<>()).add(def.id());
+            for (Map.Entry<ResourceLocation, RestrictionFlags> e : def.chemicals().entrySet()) {
+                putEdge(chemicalMap, e.getKey(), stageId, e.getValue());
             }
-
-            for (ResourceLocation dimensionId : def.dimensions()) {
-                dimensionMap.computeIfAbsent(dimensionId, k -> new LinkedHashSet<>()).add(def.id());
-            }
-            for (ResourceLocation tagId : def.dimensionTags()) {
-                for (ResourceLocation dimensionId : catalog.dimensionsInTag(tagId)) {
-                    dimensionMap.computeIfAbsent(dimensionId, k -> new LinkedHashSet<>()).add(def.id());
+            for (Map.Entry<ResourceLocation, RestrictionFlags> e : def.chemicalTags().entrySet()) {
+                for (ResourceLocation chemicalId : catalog.chemicalsInTag(e.getKey())) {
+                    putEdge(chemicalMap, chemicalId, stageId, e.getValue());
                 }
             }
-            for (String ns : def.dimensionNamespaces()) {
-                for (ResourceLocation dimensionId : catalog.dimensionsInNamespace(ns)) {
-                    dimensionMap.computeIfAbsent(dimensionId, k -> new LinkedHashSet<>()).add(def.id());
+            for (Map.Entry<String, RestrictionFlags> e : def.chemicalNamespaces().entrySet()) {
+                for (ResourceLocation chemicalId : catalog.chemicalsInNamespace(e.getKey())) {
+                    putEdge(chemicalMap, chemicalId, stageId, e.getValue());
+                }
+            }
+
+            for (Map.Entry<ResourceLocation, RestrictionFlags> e : def.recipes().entrySet()) {
+                putEdge(recipeMap, e.getKey(), stageId, e.getValue());
+            }
+
+            for (Map.Entry<ResourceLocation, RestrictionFlags> e : def.dimensions().entrySet()) {
+                putEdge(dimensionMap, e.getKey(), stageId, e.getValue());
+            }
+            for (Map.Entry<ResourceLocation, RestrictionFlags> e : def.dimensionTags().entrySet()) {
+                for (ResourceLocation dimensionId : catalog.dimensionsInTag(e.getKey())) {
+                    putEdge(dimensionMap, dimensionId, stageId, e.getValue());
+                }
+            }
+            for (Map.Entry<String, RestrictionFlags> e : def.dimensionNamespaces().entrySet()) {
+                for (ResourceLocation dimensionId : catalog.dimensionsInNamespace(e.getKey())) {
+                    putEdge(dimensionMap, dimensionId, stageId, e.getValue());
                 }
             }
         }
 
-        itemStagesIndex = freeze(itemMap);
-        fluidStagesIndex = freeze(fluidMap);
-        chemicalStagesIndex = freeze(chemicalMap);
-        recipeStagesIndex = freeze(recipeMap);
-        dimensionStagesIndex = freeze(dimensionMap);
+        itemEdges = freezeEdges(itemMap);
+        fluidEdges = freezeEdges(fluidMap);
+        chemicalEdges = freezeEdges(chemicalMap);
+        recipeEdges = freezeEdges(recipeMap);
+        dimensionEdges = freezeEdges(dimensionMap);
+
+        itemStagesIndex = stageIndexFrom(itemEdges);
+        fluidStagesIndex = stageIndexFrom(fluidEdges);
+        chemicalStagesIndex = stageIndexFrom(chemicalEdges);
+        recipeStagesIndex = stageIndexFrom(recipeEdges);
+        dimensionStagesIndex = stageIndexFrom(dimensionEdges);
+
+        itemJeiStagesIndex = jeiIndexFrom(itemEdges);
+        fluidJeiStagesIndex = jeiIndexFrom(fluidEdges);
+        chemicalJeiStagesIndex = jeiIndexFrom(chemicalEdges);
+        recipeJeiStagesIndex = jeiIndexFrom(recipeEdges);
+    }
+
+    private static void putEdge(
+            Map<ResourceLocation, Map<ResourceLocation, RestrictionFlags>> map,
+            ResourceLocation contentId,
+            ResourceLocation stageId,
+            RestrictionFlags flags
+    ) {
+        RestrictionFlags f = flags == null ? RestrictionFlags.ALL : flags;
+        map.computeIfAbsent(contentId, k -> new LinkedHashMap<>()).merge(stageId, f, RestrictionFlags::or);
     }
 
     public synchronized Map<ResourceLocation, Set<ResourceLocation>> itemStagesIndexView() {
@@ -166,6 +201,22 @@ public final class StageBook {
 
     public synchronized Map<ResourceLocation, Set<ResourceLocation>> dimensionStagesIndexView() {
         return dimensionStagesIndex;
+    }
+
+    public synchronized Map<ResourceLocation, Set<ResourceLocation>> itemJeiStagesIndexView() {
+        return itemJeiStagesIndex;
+    }
+
+    public synchronized Map<ResourceLocation, Set<ResourceLocation>> fluidJeiStagesIndexView() {
+        return fluidJeiStagesIndex;
+    }
+
+    public synchronized Map<ResourceLocation, Set<ResourceLocation>> chemicalJeiStagesIndexView() {
+        return chemicalJeiStagesIndex;
+    }
+
+    public synchronized Map<ResourceLocation, Set<ResourceLocation>> recipeJeiStagesIndexView() {
+        return recipeJeiStagesIndex;
     }
 
     public synchronized Map<ResourceLocation, StageDefinition> allDefinitions() {
@@ -223,6 +274,31 @@ public final class StageBook {
         return LockRules.isLocked(dimensionStagesIndex.get(dimensionId), ownedStages);
     }
 
+    public synchronized boolean isItemRestricted(
+            ResourceLocation itemId, Set<ResourceLocation> ownedStages, Restriction restriction) {
+        return isRestricted(itemEdges.get(itemId), ownedStages, restriction);
+    }
+
+    public synchronized boolean isFluidRestricted(
+            ResourceLocation fluidKindId, Set<ResourceLocation> ownedStages, Restriction restriction) {
+        return isRestricted(fluidEdges.get(fluidKindId), ownedStages, restriction);
+    }
+
+    public synchronized boolean isChemicalRestricted(
+            ResourceLocation chemicalId, Set<ResourceLocation> ownedStages, Restriction restriction) {
+        return isRestricted(chemicalEdges.get(chemicalId), ownedStages, restriction);
+    }
+
+    public synchronized boolean isRecipeRestricted(
+            ResourceLocation recipeId, Set<ResourceLocation> ownedStages, Restriction restriction) {
+        return isRestricted(recipeEdges.get(recipeId), ownedStages, restriction);
+    }
+
+    public synchronized boolean isDimensionRestricted(
+            ResourceLocation dimensionId, Set<ResourceLocation> ownedStages, Restriction restriction) {
+        return isRestricted(dimensionEdges.get(dimensionId), ownedStages, restriction);
+    }
+
     /**
      * Item lock including filled-bucket → fluid gating (same rule as LockResolver).
      */
@@ -241,13 +317,84 @@ public final class StageBook {
         return false;
     }
 
-    private static Map<ResourceLocation, Set<ResourceLocation>> freeze(Map<ResourceLocation, Set<ResourceLocation>> source) {
+    public synchronized boolean isItemOrFluidBucketRestricted(
+            ResourceLocation itemId, Set<ResourceLocation> ownedStages, Restriction restriction) {
+        if (isItemRestricted(itemId, ownedStages, restriction)) {
+            return true;
+        }
+        for (Map.Entry<ResourceLocation, Map<ResourceLocation, RestrictionFlags>> e : fluidEdges.entrySet()) {
+            if (!isRestricted(e.getValue(), ownedStages, restriction)) {
+                continue;
+            }
+            if (catalog.bucketItemsForFluid(e.getKey()).contains(itemId)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    static boolean isRestricted(
+            Map<ResourceLocation, RestrictionFlags> edges,
+            Set<ResourceLocation> ownedStages,
+            Restriction restriction
+    ) {
+        if (edges == null || edges.isEmpty() || restriction == null) {
+            return false;
+        }
+        if (!LockRules.isLocked(edges.keySet(), ownedStages)) {
+            return false;
+        }
+        for (RestrictionFlags flags : edges.values()) {
+            if (flags != null && flags.allows(restriction)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static Map<ResourceLocation, Set<ResourceLocation>> stageIndexFrom(
+            Map<ResourceLocation, Map<ResourceLocation, RestrictionFlags>> edges
+    ) {
+        if (edges.isEmpty()) {
+            return Map.of();
+        }
+        Map<ResourceLocation, Set<ResourceLocation>> out = new LinkedHashMap<>(edges.size());
+        for (Map.Entry<ResourceLocation, Map<ResourceLocation, RestrictionFlags>> e : edges.entrySet()) {
+            out.put(e.getKey(), Set.copyOf(e.getValue().keySet()));
+        }
+        return Collections.unmodifiableMap(out);
+    }
+
+    private static Map<ResourceLocation, Set<ResourceLocation>> jeiIndexFrom(
+            Map<ResourceLocation, Map<ResourceLocation, RestrictionFlags>> edges
+    ) {
+        if (edges.isEmpty()) {
+            return Map.of();
+        }
+        Map<ResourceLocation, Set<ResourceLocation>> out = new LinkedHashMap<>();
+        for (Map.Entry<ResourceLocation, Map<ResourceLocation, RestrictionFlags>> e : edges.entrySet()) {
+            LinkedHashSet<ResourceLocation> stages = new LinkedHashSet<>();
+            for (Map.Entry<ResourceLocation, RestrictionFlags> edge : e.getValue().entrySet()) {
+                if (edge.getValue() != null && edge.getValue().jei()) {
+                    stages.add(edge.getKey());
+                }
+            }
+            if (!stages.isEmpty()) {
+                out.put(e.getKey(), Set.copyOf(stages));
+            }
+        }
+        return out.isEmpty() ? Map.of() : Collections.unmodifiableMap(out);
+    }
+
+    private static Map<ResourceLocation, Map<ResourceLocation, RestrictionFlags>> freezeEdges(
+            Map<ResourceLocation, Map<ResourceLocation, RestrictionFlags>> source
+    ) {
         if (source.isEmpty()) {
             return Map.of();
         }
-        Map<ResourceLocation, Set<ResourceLocation>> copy = new LinkedHashMap<>(source.size());
-        for (Map.Entry<ResourceLocation, Set<ResourceLocation>> e : source.entrySet()) {
-            copy.put(e.getKey(), Set.copyOf(e.getValue()));
+        Map<ResourceLocation, Map<ResourceLocation, RestrictionFlags>> copy = new LinkedHashMap<>(source.size());
+        for (Map.Entry<ResourceLocation, Map<ResourceLocation, RestrictionFlags>> e : source.entrySet()) {
+            copy.put(e.getKey(), Map.copyOf(e.getValue()));
         }
         return Collections.unmodifiableMap(copy);
     }

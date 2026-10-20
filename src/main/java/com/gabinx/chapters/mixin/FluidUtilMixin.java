@@ -1,5 +1,6 @@
 package com.gabinx.chapters.mixin;
 
+import com.gabinx.chapters.logic.Restriction;
 import com.gabinx.chapters.stage.LockResolver;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerPlayer;
@@ -96,7 +97,9 @@ public abstract class FluidUtilMixin {
         FluidStack resource,
         CallbackInfoReturnable<Boolean> cir
     ) {
-        if (!resource.isEmpty() && player instanceof ServerPlayer sp && LockResolver.isFluidLocked(sp, resource)) {
+        if (!resource.isEmpty()
+                && player instanceof ServerPlayer sp
+                && LockResolver.isFluidRestricted(sp, resource, Restriction.TRANSFER)) {
             cir.setReturnValue(false);
             return;
         }
@@ -137,7 +140,9 @@ public abstract class FluidUtilMixin {
         FluidStack drainable
     ) {
         Player actor = CHAPTERS_FLUID_ACTOR.get();
-        if (actor instanceof ServerPlayer sp && !drainable.isEmpty() && LockResolver.isFluidLocked(sp, drainable)) {
+        if (actor instanceof ServerPlayer sp
+                && !drainable.isEmpty()
+                && LockResolver.isFluidRestricted(sp, drainable, Restriction.TRANSFER)) {
             cir.setReturnValue(FluidStack.EMPTY);
         }
     }
@@ -160,7 +165,9 @@ public abstract class FluidUtilMixin {
         FluidStack drainable
     ) {
         Player actor = CHAPTERS_FLUID_ACTOR.get();
-        if (actor instanceof ServerPlayer sp && !drainable.isEmpty() && LockResolver.isFluidLocked(sp, drainable)) {
+        if (actor instanceof ServerPlayer sp
+                && !drainable.isEmpty()
+                && LockResolver.isFluidRestricted(sp, drainable, Restriction.TRANSFER)) {
             cir.setReturnValue(FluidStack.EMPTY);
         }
     }

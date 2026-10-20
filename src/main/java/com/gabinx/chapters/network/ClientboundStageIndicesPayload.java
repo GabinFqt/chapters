@@ -15,15 +15,17 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * Server-to-client payload carrying every stage-locking index (items, fluids, chemicals, recipes) in a single message.
- * Mirrors {@link com.gabinx.chapters.stage.StageManager} indices into {@link ClientStageIndices} so that
- * {@link com.gabinx.chapters.compat.RecipeViewerCompat} can compute locked sets on the logical client.
+ * Server-to-client payload carrying lock indices plus JEI-filtered indices.
  */
 public record ClientboundStageIndicesPayload(
         Map<Identifier, Set<Identifier>> itemStages,
         Map<Identifier, Set<Identifier>> fluidStages,
         Map<Identifier, Set<Identifier>> chemicalStages,
-        Map<Identifier, Set<Identifier>> recipeStages
+        Map<Identifier, Set<Identifier>> recipeStages,
+        Map<Identifier, Set<Identifier>> itemJeiStages,
+        Map<Identifier, Set<Identifier>> fluidJeiStages,
+        Map<Identifier, Set<Identifier>> chemicalJeiStages,
+        Map<Identifier, Set<Identifier>> recipeJeiStages
 ) implements CustomPacketPayload {
 
     public ClientboundStageIndicesPayload {
@@ -31,6 +33,10 @@ public record ClientboundStageIndicesPayload(
         fluidStages = Map.copyOf(fluidStages);
         chemicalStages = Map.copyOf(chemicalStages);
         recipeStages = Map.copyOf(recipeStages);
+        itemJeiStages = Map.copyOf(itemJeiStages);
+        fluidJeiStages = Map.copyOf(fluidJeiStages);
+        chemicalJeiStages = Map.copyOf(chemicalJeiStages);
+        recipeJeiStages = Map.copyOf(recipeJeiStages);
     }
 
     public static final Type<ClientboundStageIndicesPayload> TYPE =
@@ -49,10 +55,22 @@ public record ClientboundStageIndicesPayload(
         writeMap(buf, payload.fluidStages);
         writeMap(buf, payload.chemicalStages);
         writeMap(buf, payload.recipeStages);
+        writeMap(buf, payload.itemJeiStages);
+        writeMap(buf, payload.fluidJeiStages);
+        writeMap(buf, payload.chemicalJeiStages);
+        writeMap(buf, payload.recipeJeiStages);
     }
 
     private static ClientboundStageIndicesPayload read(RegistryFriendlyByteBuf buf) {
-        return new ClientboundStageIndicesPayload(readMap(buf), readMap(buf), readMap(buf), readMap(buf));
+        return new ClientboundStageIndicesPayload(
+                readMap(buf),
+                readMap(buf),
+                readMap(buf),
+                readMap(buf),
+                readMap(buf),
+                readMap(buf),
+                readMap(buf),
+                readMap(buf));
     }
 
     private static void writeMap(RegistryFriendlyByteBuf buf, Map<Identifier, Set<Identifier>> map) {
@@ -87,7 +105,11 @@ public record ClientboundStageIndicesPayload(
                     payload.itemStages,
                     payload.fluidStages,
                     payload.chemicalStages,
-                    payload.recipeStages
+                    payload.recipeStages,
+                    payload.itemJeiStages,
+                    payload.fluidJeiStages,
+                    payload.chemicalJeiStages,
+                    payload.recipeJeiStages
             );
             RecipeViewerCompat.refresh();
         });

@@ -17,6 +17,10 @@ public final class ClientStageView {
     private Map<Identifier, Set<Identifier>> fluids = Map.of();
     private Map<Identifier, Set<Identifier>> chemicals = Map.of();
     private Map<Identifier, Set<Identifier>> recipes = Map.of();
+    private Map<Identifier, Set<Identifier>> itemJei = Map.of();
+    private Map<Identifier, Set<Identifier>> fluidJei = Map.of();
+    private Map<Identifier, Set<Identifier>> chemicalJei = Map.of();
+    private Map<Identifier, Set<Identifier>> recipeJei = Map.of();
 
     public synchronized void setStages(Set<Identifier> next) {
         stages.clear();
@@ -43,10 +47,35 @@ public final class ClientStageView {
             Map<Identifier, Set<Identifier>> nextChemicals,
             Map<Identifier, Set<Identifier>> nextRecipes
     ) {
+        replaceIndices(
+                nextItems,
+                nextFluids,
+                nextChemicals,
+                nextRecipes,
+                nextItems,
+                nextFluids,
+                nextChemicals,
+                nextRecipes);
+    }
+
+    public synchronized void replaceIndices(
+            Map<Identifier, Set<Identifier>> nextItems,
+            Map<Identifier, Set<Identifier>> nextFluids,
+            Map<Identifier, Set<Identifier>> nextChemicals,
+            Map<Identifier, Set<Identifier>> nextRecipes,
+            Map<Identifier, Set<Identifier>> nextItemJei,
+            Map<Identifier, Set<Identifier>> nextFluidJei,
+            Map<Identifier, Set<Identifier>> nextChemicalJei,
+            Map<Identifier, Set<Identifier>> nextRecipeJei
+    ) {
         items = freeze(nextItems);
         fluids = freeze(nextFluids);
         chemicals = freeze(nextChemicals);
         recipes = freeze(nextRecipes);
+        itemJei = freeze(nextItemJei);
+        fluidJei = freeze(nextFluidJei);
+        chemicalJei = freeze(nextChemicalJei);
+        recipeJei = freeze(nextRecipeJei);
     }
 
     public synchronized Map<Identifier, Set<Identifier>> itemsView() {
@@ -63,6 +92,22 @@ public final class ClientStageView {
 
     public synchronized Map<Identifier, Set<Identifier>> recipesView() {
         return recipes;
+    }
+
+    public synchronized Map<Identifier, Set<Identifier>> itemJeiView() {
+        return itemJei;
+    }
+
+    public synchronized Map<Identifier, Set<Identifier>> fluidJeiView() {
+        return fluidJei;
+    }
+
+    public synchronized Map<Identifier, Set<Identifier>> chemicalJeiView() {
+        return chemicalJei;
+    }
+
+    public synchronized Map<Identifier, Set<Identifier>> recipeJeiView() {
+        return recipeJei;
     }
 
     public synchronized Set<Identifier> lockedFluidIds() {

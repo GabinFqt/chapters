@@ -23,6 +23,27 @@ public final class ClientStageIndices {
         ClientStageMirror.VIEW.replaceIndices(nextItems, nextFluids, nextChemicals, nextRecipes);
     }
 
+    public static synchronized void replace(
+            Map<Identifier, Set<Identifier>> nextItems,
+            Map<Identifier, Set<Identifier>> nextFluids,
+            Map<Identifier, Set<Identifier>> nextChemicals,
+            Map<Identifier, Set<Identifier>> nextRecipes,
+            Map<Identifier, Set<Identifier>> nextItemJei,
+            Map<Identifier, Set<Identifier>> nextFluidJei,
+            Map<Identifier, Set<Identifier>> nextChemicalJei,
+            Map<Identifier, Set<Identifier>> nextRecipeJei
+    ) {
+        ClientStageMirror.VIEW.replaceIndices(
+                nextItems,
+                nextFluids,
+                nextChemicals,
+                nextRecipes,
+                nextItemJei,
+                nextFluidJei,
+                nextChemicalJei,
+                nextRecipeJei);
+    }
+
     public static Map<Identifier, Set<Identifier>> itemsView() {
         return ClientStageMirror.VIEW.itemsView();
     }
@@ -37,5 +58,21 @@ public final class ClientStageIndices {
 
     public static Map<Identifier, Set<Identifier>> recipesView() {
         return ClientStageMirror.VIEW.recipesView();
+    }
+
+    public static Map<Identifier, Set<Identifier>> itemJeiView() {
+        return ClientStageMirror.VIEW.itemJeiView();
+    }
+
+    public static Map<Identifier, Set<Identifier>> fluidJeiView() {
+        return ClientStageMirror.VIEW.fluidJeiView();
+    }
+
+    public static Map<Identifier, Set<Identifier>> chemicalJeiView() {
+        return ClientStageMirror.VIEW.chemicalJeiView();
+    }
+
+    public static Map<Identifier, Set<Identifier>> recipeJeiView() {
+        return ClientStageMirror.VIEW.recipeJeiView();
     }
 }

@@ -2,6 +2,8 @@ package com.gabinx.chapters.stage;
 
 import com.gabinx.chapters.compat.ftb.EffectiveStages;
 import com.gabinx.chapters.logic.LockRules;
+import com.gabinx.chapters.logic.Restriction;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
@@ -17,6 +19,7 @@ public final class LockResolver {
     private LockResolver() {
     }
 
+    /** True if the stack is gated by any stage (flags ignored). */
     public static boolean isLocked(ServerPlayer player, ItemStack stack) {
         if (stack.isEmpty()) {
             return false;
@@ -27,11 +30,31 @@ public final class LockResolver {
         return isFluidBucketLocked(player, stack);
     }
 
+    public static boolean isRestricted(ServerPlayer player, ItemStack stack, Restriction restriction) {
+        if (stack.isEmpty() || restriction == null) {
+            return false;
+        }
+        Identifier itemId = BuiltInRegistries.ITEM.getKey(stack.getItem());
+        Set<Identifier> owned = EffectiveStages.of(player);
+        if (StageManager.get().book().isItemRestricted(itemId, owned, restriction)) {
+            return true;
+        }
+        return isFluidBucketRestricted(player, stack, restriction);
+    }
+
     public static boolean isFluidLocked(ServerPlayer player, FluidStack stack) {
         if (stack == null || stack.isEmpty()) {
             return false;
         }
         return StageManager.get().isFluidLocked(EffectiveStages.snapshot(player), stack);
+    }
+
+    public static boolean isFluidRestricted(ServerPlayer player, FluidStack stack, Restriction restriction) {
+        if (stack == null || stack.isEmpty() || restriction == null) {
+            return false;
+        }
+        Identifier kind = StageDefinition.fluidKindRegistryKey(stack.getFluid());
+        return StageManager.get().book().isFluidRestricted(kind, EffectiveStages.of(player), restriction);
     }
 
     /**
@@ -47,7 +70,7 @@ public final class LockResolver {
             return false;
         }
         if (player instanceof ServerPlayer serverPlayer && !player.level().isClientSide()) {
-            return isFluidLocked(serverPlayer, stack);
+            return isFluidRestricted(serverPlayer, stack, Restriction.TRANSFER);
         }
         if (player.level().isClientSide()) {
             return isFluidLockedClient(stack);
@@ -66,6 +89,18 @@ public final class LockResolver {
         return isFluidLocked(player, filled);
     }
 
+    public static boolean isFluidBucketRestricted(
+            ServerPlayer player, ItemStack stack, Restriction restriction) {
+        if (stack.isEmpty() || !(stack.getItem() instanceof BucketItem bucket) || restriction == null) {
+            return false;
+        }
+        Fluid filled = bucket.content;
+        if (filled == null || filled == Fluids.EMPTY) {
+            return false;
+        }
+        return isFluidRestricted(player, new FluidStack(filled, 1000), restriction);
+    }
+
     private static boolean isFluidLockedClient(FluidStack stack) {
         Identifier kind = StageDefinition.fluidKindRegistryKey(stack.getFluid());
         if (kind == null) {
@@ -82,6 +117,16 @@ public final class LockResolver {
         return StageManager.get().isChemicalLocked(EffectiveStages.snapshot(player), chemicalRegistryKey);
     }
 
+    public static boolean isChemicalRestricted(
+            ServerPlayer player, Identifier chemicalRegistryKey, Restriction restriction) {
+        if (chemicalRegistryKey == null || restriction == null) {
+            return false;
+        }
+        return StageManager.get()
+                .book()
+                .isChemicalRestricted(chemicalRegistryKey, EffectiveStages.of(player), restriction);
+    }
+
     public static boolean isRecipeLocked(ServerPlayer player, Identifier recipeHolderId) {
         if (recipeHolderId == null) {
             return false;
@@ -89,10 +134,30 @@ public final class LockResolver {
         return StageManager.get().isRecipeLocked(EffectiveStages.snapshot(player), recipeHolderId);
     }
 
+    public static boolean isRecipeRestricted(
+            ServerPlayer player, Identifier recipeHolderId, Restriction restriction) {
+        if (recipeHolderId == null || restriction == null) {
+            return false;
+        }
+        return StageManager.get()
+                .book()
+                .isRecipeRestricted(recipeHolderId, EffectiveStages.of(player), restriction);
+    }
+
     public static boolean isDimensionLocked(ServerPlayer player, Identifier dimensionId) {
         if (dimensionId == null) {
             return false;
         }
         return StageManager.get().isDimensionLocked(EffectiveStages.snapshot(player), dimensionId);
+    }
+
+    public static boolean isDimensionRestricted(
+            ServerPlayer player, Identifier dimensionId, Restriction restriction) {
+        if (dimensionId == null || restriction == null) {
+            return false;
+        }
+        return StageManager.get()
+                .book()
+                .isDimensionRestricted(dimensionId, EffectiveStages.of(player), restriction);
     }
 }

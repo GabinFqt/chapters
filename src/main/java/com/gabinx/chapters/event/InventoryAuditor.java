@@ -1,6 +1,7 @@
 package com.gabinx.chapters.event;
 
 import com.gabinx.chapters.logic.InventoryPlan;
+import com.gabinx.chapters.logic.Restriction;
 import com.gabinx.chapters.stage.LockResolver;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
@@ -40,7 +41,7 @@ public final class InventoryAuditor {
         }
         for (int slot : InventoryPlan.slotsToDrop(slotIds, itemId -> {
             ItemStack probe = new ItemStack(BuiltInRegistries.ITEM.getValue(itemId));
-            return LockResolver.isLocked(player, probe);
+            return LockResolver.isRestricted(player, probe, Restriction.INVENTORY);
         })) {
             ItemStack stack = player.getInventory().getItem(slot);
             if (stack.isEmpty()) {

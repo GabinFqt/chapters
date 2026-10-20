@@ -1,16 +1,17 @@
 # KubeJS
 
-Install **KubeJS** alongside **Chapters**. There is no separate Chapters config file: the script API is registered when both mods load.
+Install **KubeJS** alongside **Chapters**. The script API is registered when both mods load. Common Chapters settings (e.g. FTB Teams sync) live in `config/chapters-common.toml`.
 
-## `ChaptersEvents.defineStage(stageId, entries)`
+## `ChaptersEvents.defineStage(stageId, entries[, restrictions])`
 
 - **`stageId`**: string like `"mypack:tier2"`.
-- **`entries`**: array of strings. Same ideas as datapack lists, but **prefixes** make each line unambiguous:
+- **`entries`**: array of strings **or** objects `{ id: '…', jei: false, … }`. Same ideas as datapack lists, but **prefixes** make each line unambiguous:
   - item: `"minecraft:diamond"`, `"#minecraft:swords"`, `"@create"`
   - fluid: `"fluid:minecraft:lava"`
   - Mekanism chemical: `"chemical:mekanism:hydrogen"` (indexed only when Mekanism compat is active; on Minecraft **26** / Chapters **2.x** chemical gating is off until Mekanism ships)
   - recipe: `"recipe:minecraft:diamond_pickaxe"`
   - dimension: `"dimension:minecraft:the_nether"`, `"dimension:#ns:tag"`, `"dimension:@modid"`
+- **`restrictions`** (optional): stage-wide defaults, e.g. `{ jei: false }`. See [[Stages-datapack]] for flag names.
 
 Many `defineStage` calls in the **same server tick** are batched internally so indexing stays fast after load.
 
@@ -26,6 +27,15 @@ ServerEvents.loaded((event) => {
     'dimension:minecraft:the_nether',
     '@create'
   ])
+
+  ChaptersEvents.defineStage(
+    'mypack:visible_but_gated',
+    [
+      'minecraft:diamond',
+      { id: 'minecraft:emerald', jei: false, inventory: false }
+    ],
+    { craft: true }
+  )
 
   ChaptersEvents.defineStage('mypack:mek_early', ['chemical:mekanism:hydrogen'])
 })

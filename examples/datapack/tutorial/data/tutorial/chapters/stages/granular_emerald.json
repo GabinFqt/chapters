@@ -1,0 +1,12 @@
+{
+  "restrictions": {
+    "pickup": true,
+    "inventory": false,
+    "craft": true,
+    "jei": false
+  },
+  "items": [
+    "minecraft:copper_ingot",
+    { "id": "minecraft:raw_copper", "pickup": false }
+  ]
+}

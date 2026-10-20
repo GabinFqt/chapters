@@ -1,5 +1,6 @@
 package com.gabinx.chapters.mixin.compat.mekanism;
 
+import com.gabinx.chapters.logic.Restriction;
 import com.gabinx.chapters.stage.ChemicalInteractionActor;
 import com.gabinx.chapters.stage.LockResolver;
 import mekanism.api.AutomationType;
@@ -37,7 +38,7 @@ public abstract class ChemicalUtilsMixin {
 
     private static boolean isLocked(ServerPlayer player, ChemicalStack stack) {
         Identifier key = MekanismAPI.CHEMICAL_REGISTRY.getKey(stack.getChemical());
-        return key != null && LockResolver.isChemicalLocked(player, key);
+        return key != null && LockResolver.isChemicalRestricted(player, key, Restriction.TRANSFER);
     }
 
     @Inject(

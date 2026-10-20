@@ -11,6 +11,9 @@ import net.neoforged.fml.ModList;
  * lazily on first invocation. Combined with {@code ModList.isLoaded(...)}
  * gating, that ensures the JVM never tries to resolve FTB symbols when the
  * corresponding mod is absent.
+ * <p>
+ * Team storage is additionally gated by {@link com.gabinx.chapters.ChaptersConfig#syncWithFtbTeams()}
+ * via {@link EffectiveStages#useTeamStages()}.
  */
 public final class FtbCompat {
     private static final String FTB_LIBRARY = "ftblibrary";
@@ -37,6 +40,8 @@ public final class FtbCompat {
             try {
                 FtbTeamsListeners.register();
                 teamsActive = true;
+                Chapters.LOGGER.info(
+                        "Chapters: FTB Teams detected (team sync follows config syncWithFtbTeams)");
             } catch (Throwable t) {
                 Chapters.LOGGER.error("Chapters: failed to wire FTB Teams listeners", t);
             }

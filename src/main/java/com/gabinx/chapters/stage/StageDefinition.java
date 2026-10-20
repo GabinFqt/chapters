@@ -1,5 +1,6 @@
 package com.gabinx.chapters.stage;
 
+import com.gabinx.chapters.logic.RestrictionFlags;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -12,87 +13,95 @@ import net.minecraft.world.level.material.FlowingFluid;
 import net.minecraft.world.level.material.Fluid;
 import net.neoforged.neoforge.fluids.FluidStack;
 
-import java.util.LinkedHashSet;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
 public record StageDefinition(
         Identifier id,
-        Set<Identifier> items,
-        Set<TagKey<Item>> tags,
-        Set<String> namespaces,
-        Set<Identifier> fluids,
-        Set<TagKey<Fluid>> fluidTags,
-        Set<String> fluidNamespaces,
-        Set<Identifier> chemicals,
-        Set<Identifier> chemicalTags,
-        Set<String> chemicalNamespaces,
+        Map<Identifier, RestrictionFlags> items,
+        Map<TagKey<Item>, RestrictionFlags> tags,
+        Map<String, RestrictionFlags> namespaces,
+        Map<Identifier, RestrictionFlags> fluids,
+        Map<TagKey<Fluid>, RestrictionFlags> fluidTags,
+        Map<String, RestrictionFlags> fluidNamespaces,
+        Map<Identifier, RestrictionFlags> chemicals,
+        Map<Identifier, RestrictionFlags> chemicalTags,
+        Map<String, RestrictionFlags> chemicalNamespaces,
         /** Crafting (and other) recipe holder ids to lock until the player has this stage. */
-        Set<Identifier> recipes,
+        Map<Identifier, RestrictionFlags> recipes,
         /** Dimension ids (e.g. {@code minecraft:the_nether}) gated by this stage. */
-        Set<Identifier> dimensions,
-        Set<Identifier> dimensionTags,
-        Set<String> dimensionNamespaces) {
+        Map<Identifier, RestrictionFlags> dimensions,
+        Map<Identifier, RestrictionFlags> dimensionTags,
+        Map<String, RestrictionFlags> dimensionNamespaces) {
 
     public static StageDefinition fromJson(Identifier id, JsonObject json) {
-        Set<Identifier> items = new LinkedHashSet<>();
-        Set<TagKey<Item>> tags = new LinkedHashSet<>();
-        Set<String> namespaces = new LinkedHashSet<>();
-        Set<Identifier> fluids = new LinkedHashSet<>();
-        Set<TagKey<Fluid>> fluidTags = new LinkedHashSet<>();
-        Set<String> fluidNamespaces = new LinkedHashSet<>();
-        Set<Identifier> chemicals = new LinkedHashSet<>();
-        Set<Identifier> chemicalTags = new LinkedHashSet<>();
-        Set<String> chemicalNamespaces = new LinkedHashSet<>();
-        Set<Identifier> recipes = new LinkedHashSet<>();
-        Set<Identifier> dimensions = new LinkedHashSet<>();
-        Set<Identifier> dimensionTags = new LinkedHashSet<>();
-        Set<String> dimensionNamespaces = new LinkedHashSet<>();
+        RestrictionFlags stageDefaults = RestrictionFlags.ALL;
+        if (json.has("restrictions") && json.get("restrictions").isJsonObject()) {
+            stageDefaults = RestrictionFlags.fromJson(json.getAsJsonObject("restrictions"));
+        }
+
+        Map<Identifier, RestrictionFlags> items = new LinkedHashMap<>();
+        Map<TagKey<Item>, RestrictionFlags> tags = new LinkedHashMap<>();
+        Map<String, RestrictionFlags> namespaces = new LinkedHashMap<>();
+        Map<Identifier, RestrictionFlags> fluids = new LinkedHashMap<>();
+        Map<TagKey<Fluid>, RestrictionFlags> fluidTags = new LinkedHashMap<>();
+        Map<String, RestrictionFlags> fluidNamespaces = new LinkedHashMap<>();
+        Map<Identifier, RestrictionFlags> chemicals = new LinkedHashMap<>();
+        Map<Identifier, RestrictionFlags> chemicalTags = new LinkedHashMap<>();
+        Map<String, RestrictionFlags> chemicalNamespaces = new LinkedHashMap<>();
+        Map<Identifier, RestrictionFlags> recipes = new LinkedHashMap<>();
+        Map<Identifier, RestrictionFlags> dimensions = new LinkedHashMap<>();
+        Map<Identifier, RestrictionFlags> dimensionTags = new LinkedHashMap<>();
+        Map<String, RestrictionFlags> dimensionNamespaces = new LinkedHashMap<>();
 
         JsonArray namespacesJson = json.getAsJsonArray("namespaces");
         if (namespacesJson != null) {
             for (JsonElement element : namespacesJson) {
-                if (!element.isJsonPrimitive()) {
+                ParsedEntry entry = parseListEntry(element, stageDefaults);
+                if (entry == null) {
                     continue;
                 }
-                String n = element.getAsString();
-                addNamespace(namespaces, n);
-                addFluidNamespace(fluidNamespaces, n);
-                addChemicalNamespace(chemicalNamespaces, n);
+                putNamespace(namespaces, entry.raw(), entry.flags());
+                putNamespace(fluidNamespaces, entry.raw(), entry.flags());
+                putNamespace(chemicalNamespaces, entry.raw(), entry.flags());
             }
         }
 
         JsonArray fluidNamespacesJson = json.getAsJsonArray("fluid_namespaces");
         if (fluidNamespacesJson != null) {
             for (JsonElement element : fluidNamespacesJson) {
-                if (!element.isJsonPrimitive()) {
-                    continue;
+                ParsedEntry entry = parseListEntry(element, stageDefaults);
+                if (entry != null) {
+                    putNamespace(fluidNamespaces, entry.raw(), entry.flags());
                 }
-                addFluidNamespace(fluidNamespaces, element.getAsString());
             }
         }
 
         JsonArray chemicalNamespacesJson = json.getAsJsonArray("chemical_namespaces");
         if (chemicalNamespacesJson != null) {
             for (JsonElement element : chemicalNamespacesJson) {
-                if (!element.isJsonPrimitive()) {
-                    continue;
+                ParsedEntry entry = parseListEntry(element, stageDefaults);
+                if (entry != null) {
+                    putNamespace(chemicalNamespaces, entry.raw(), entry.flags());
                 }
-                addChemicalNamespace(chemicalNamespaces, element.getAsString());
             }
         }
 
         JsonArray values = json.getAsJsonArray("items");
         if (values != null) {
             for (JsonElement element : values) {
-                if (!element.isJsonPrimitive()) {
+                ParsedEntry entry = parseListEntry(element, stageDefaults);
+                if (entry == null) {
                     continue;
                 }
-                String itemEntry = element.getAsString();
-                accumulateEntry(itemEntry, items, tags, namespaces);
-                if (itemEntry != null && itemEntry.trim().startsWith("@")) {
-                    accumulateFluidEntry(itemEntry.trim(), fluids, fluidTags, fluidNamespaces);
-                    accumulateChemicalEntry(itemEntry.trim(), chemicals, chemicalTags, chemicalNamespaces);
+                accumulateEntry(entry.raw(), entry.flags(), items, tags, namespaces);
+                if (entry.raw().trim().startsWith("@")) {
+                    accumulateFluidEntry(entry.raw().trim(), entry.flags(), fluids, fluidTags, fluidNamespaces);
+                    accumulateChemicalEntry(
+                            entry.raw().trim(), entry.flags(), chemicals, chemicalTags, chemicalNamespaces);
                 }
             }
         }
@@ -100,40 +109,40 @@ public record StageDefinition(
         JsonArray fluidValues = json.getAsJsonArray("fluids");
         if (fluidValues != null) {
             for (JsonElement element : fluidValues) {
-                if (!element.isJsonPrimitive()) {
-                    continue;
+                ParsedEntry entry = parseListEntry(element, stageDefaults);
+                if (entry != null) {
+                    accumulateFluidEntry(entry.raw(), entry.flags(), fluids, fluidTags, fluidNamespaces);
                 }
-                accumulateFluidEntry(element.getAsString(), fluids, fluidTags, fluidNamespaces);
             }
         }
 
         JsonArray chemicalValues = json.getAsJsonArray("chemicals");
         if (chemicalValues != null) {
             for (JsonElement element : chemicalValues) {
-                if (!element.isJsonPrimitive()) {
-                    continue;
+                ParsedEntry entry = parseListEntry(element, stageDefaults);
+                if (entry != null) {
+                    accumulateChemicalEntry(entry.raw(), entry.flags(), chemicals, chemicalTags, chemicalNamespaces);
                 }
-                accumulateChemicalEntry(element.getAsString(), chemicals, chemicalTags, chemicalNamespaces);
             }
         }
 
         JsonArray recipeValues = json.getAsJsonArray("recipes");
         if (recipeValues != null) {
             for (JsonElement element : recipeValues) {
-                if (!element.isJsonPrimitive()) {
-                    continue;
+                ParsedEntry entry = parseListEntry(element, stageDefaults);
+                if (entry != null) {
+                    accumulateRecipeEntry(entry.raw(), entry.flags(), recipes);
                 }
-                accumulateRecipeEntry(element.getAsString(), recipes);
             }
         }
 
         JsonArray dimensionValues = json.getAsJsonArray("dimensions");
         if (dimensionValues != null) {
             for (JsonElement element : dimensionValues) {
-                if (!element.isJsonPrimitive()) {
-                    continue;
+                ParsedEntry entry = parseListEntry(element, stageDefaults);
+                if (entry != null) {
+                    accumulateDimensionEntry(entry.raw(), entry.flags(), dimensions, dimensionTags, dimensionNamespaces);
                 }
-                accumulateDimensionEntry(element.getAsString(), dimensions, dimensionTags, dimensionNamespaces);
             }
         }
 
@@ -155,14 +164,48 @@ public record StageDefinition(
     }
 
     /**
+     * Accepts a legacy string or an object {@code {"id":"…", "jei":false, …}}.
+     */
+    static ParsedEntry parseListEntry(JsonElement element, RestrictionFlags stageDefaults) {
+        if (element == null || element.isJsonNull()) {
+            return null;
+        }
+        if (element.isJsonPrimitive()) {
+            String raw = element.getAsString();
+            if (raw == null || raw.trim().isEmpty()) {
+                return null;
+            }
+            return new ParsedEntry(raw, stageDefaults);
+        }
+        if (!element.isJsonObject()) {
+            return null;
+        }
+        JsonObject obj = element.getAsJsonObject();
+        String raw = null;
+        if (obj.has("id") && obj.get("id").isJsonPrimitive()) {
+            raw = obj.get("id").getAsString();
+        } else if (obj.has("item") && obj.get("item").isJsonPrimitive()) {
+            raw = obj.get("item").getAsString();
+        }
+        if (raw == null || raw.trim().isEmpty()) {
+            return null;
+        }
+        return new ParsedEntry(raw, stageDefaults.withOverrides(obj));
+    }
+
+    record ParsedEntry(String raw, RestrictionFlags flags) {
+    }
+
+    /**
      * One stage-list entry from a datapack or KubeJS: item id (namespaced path), {@code #item_tag}, or
      * {@code @mod_id} meaning every item registered under that namespace.
      */
     public static void accumulateEntry(
             String raw,
-            Set<Identifier> itemsOut,
-            Set<TagKey<Item>> tagsOut,
-            Set<String> namespacesOut) {
+            RestrictionFlags flags,
+            Map<Identifier, RestrictionFlags> itemsOut,
+            Map<TagKey<Item>, RestrictionFlags> tagsOut,
+            Map<String, RestrictionFlags> namespacesOut) {
         if (raw == null) {
             return;
         }
@@ -170,27 +213,34 @@ public record StageDefinition(
         if (trimmed.isEmpty()) {
             return;
         }
+        RestrictionFlags f = flags == null ? RestrictionFlags.ALL : flags;
         if (trimmed.startsWith("#")) {
             Identifier tagId = Identifier.tryParse(trimmed.substring(1).trim());
             if (tagId != null) {
-                tagsOut.add(TagKey.create(BuiltInRegistries.ITEM.key(), tagId));
+                mergeFlags(tagsOut, TagKey.create(BuiltInRegistries.ITEM.key(), tagId), f);
             }
             return;
         }
         if (trimmed.startsWith("@")) {
-            addNamespace(namespacesOut, trimmed.substring(1));
+            putNamespace(namespacesOut, trimmed.substring(1), f);
             return;
         }
         Identifier itemId = Identifier.tryParse(trimmed);
         if (itemId != null) {
-            itemsOut.add(itemId);
+            mergeFlags(itemsOut, itemId, f);
         }
     }
 
-    /**
-     * {@code namespaces} datapack column (and optional {@code @} prefix); same validation as Vanilla mod ids.
-     */
-    static void addNamespace(Set<String> namespacesOut, String raw) {
+    /** Convenience overload: all restrictions enabled. */
+    public static void accumulateEntry(
+            String raw,
+            Map<Identifier, RestrictionFlags> itemsOut,
+            Map<TagKey<Item>, RestrictionFlags> tagsOut,
+            Map<String, RestrictionFlags> namespacesOut) {
+        accumulateEntry(raw, RestrictionFlags.ALL, itemsOut, tagsOut, namespacesOut);
+    }
+
+    static void putNamespace(Map<String, RestrictionFlags> namespacesOut, String raw, RestrictionFlags flags) {
         if (raw == null) {
             return;
         }
@@ -203,28 +253,17 @@ public record StageDefinition(
         }
         try {
             Identifier.fromNamespaceAndPath(s, "x");
-            namespacesOut.add(s);
+            mergeFlags(namespacesOut, s, flags == null ? RestrictionFlags.ALL : flags);
         } catch (IllegalArgumentException ignored) {
         }
     }
 
-    static void addFluidNamespace(Set<String> namespacesOut, String raw) {
-        addNamespace(namespacesOut, raw);
-    }
-
-    static void addChemicalNamespace(Set<String> namespacesOut, String raw) {
-        addNamespace(namespacesOut, raw);
-    }
-
-    /**
-     * One stage-list fluid entry from a datapack or KubeJS: fluid id, {@code #fluid_tag}, or {@code @} mod namespace for
-     * every fluid registered under that namespace.
-     */
     public static void accumulateFluidEntry(
             String raw,
-            Set<Identifier> fluidsOut,
-            Set<TagKey<Fluid>> fluidTagsOut,
-            Set<String> fluidNamespacesOut) {
+            RestrictionFlags flags,
+            Map<Identifier, RestrictionFlags> fluidsOut,
+            Map<TagKey<Fluid>, RestrictionFlags> fluidTagsOut,
+            Map<String, RestrictionFlags> fluidNamespacesOut) {
         if (raw == null) {
             return;
         }
@@ -232,32 +271,38 @@ public record StageDefinition(
         if (trimmed.isEmpty()) {
             return;
         }
+        RestrictionFlags f = flags == null ? RestrictionFlags.ALL : flags;
         if (trimmed.startsWith("#")) {
             Identifier tagId = Identifier.tryParse(trimmed.substring(1).trim());
             if (tagId != null) {
-                fluidTagsOut.add(TagKey.create(BuiltInRegistries.FLUID.key(), tagId));
+                mergeFlags(fluidTagsOut, TagKey.create(BuiltInRegistries.FLUID.key(), tagId), f);
             }
             return;
         }
         if (trimmed.startsWith("@")) {
-            addFluidNamespace(fluidNamespacesOut, trimmed.substring(1));
+            putNamespace(fluidNamespacesOut, trimmed.substring(1), f);
             return;
         }
         Identifier fluidId = Identifier.tryParse(trimmed);
         if (fluidId != null) {
-            fluidsOut.add(fluidId);
+            mergeFlags(fluidsOut, fluidId, f);
         }
     }
 
-    /**
-     * Mekanism chemical id, {@code #chemical_tag} on Mekanism's chemical registry, or {@code @} mod namespace (requires
-     * Mekanism at runtime to expand).
-     */
+    public static void accumulateFluidEntry(
+            String raw,
+            Map<Identifier, RestrictionFlags> fluidsOut,
+            Map<TagKey<Fluid>, RestrictionFlags> fluidTagsOut,
+            Map<String, RestrictionFlags> fluidNamespacesOut) {
+        accumulateFluidEntry(raw, RestrictionFlags.ALL, fluidsOut, fluidTagsOut, fluidNamespacesOut);
+    }
+
     public static void accumulateChemicalEntry(
             String raw,
-            Set<Identifier> chemicalsOut,
-            Set<Identifier> chemicalTagIdsOut,
-            Set<String> chemicalNamespacesOut) {
+            RestrictionFlags flags,
+            Map<Identifier, RestrictionFlags> chemicalsOut,
+            Map<Identifier, RestrictionFlags> chemicalTagIdsOut,
+            Map<String, RestrictionFlags> chemicalNamespacesOut) {
         if (raw == null) {
             return;
         }
@@ -265,27 +310,34 @@ public record StageDefinition(
         if (trimmed.isEmpty()) {
             return;
         }
+        RestrictionFlags f = flags == null ? RestrictionFlags.ALL : flags;
         if (trimmed.startsWith("#")) {
             Identifier tagId = Identifier.tryParse(trimmed.substring(1).trim());
             if (tagId != null) {
-                chemicalTagIdsOut.add(tagId);
+                mergeFlags(chemicalTagIdsOut, tagId, f);
             }
             return;
         }
         if (trimmed.startsWith("@")) {
-            addChemicalNamespace(chemicalNamespacesOut, trimmed.substring(1));
+            putNamespace(chemicalNamespacesOut, trimmed.substring(1), f);
             return;
         }
         Identifier chemicalId = Identifier.tryParse(trimmed);
         if (chemicalId != null) {
-            chemicalsOut.add(chemicalId);
+            mergeFlags(chemicalsOut, chemicalId, f);
         }
     }
 
-    /**
-     * One stage-list recipe entry: exact recipe id ({@code minecraft:stick}).
-     */
-    public static void accumulateRecipeEntry(String raw, Set<Identifier> recipesOut) {
+    public static void accumulateChemicalEntry(
+            String raw,
+            Map<Identifier, RestrictionFlags> chemicalsOut,
+            Map<Identifier, RestrictionFlags> chemicalTagIdsOut,
+            Map<String, RestrictionFlags> chemicalNamespacesOut) {
+        accumulateChemicalEntry(raw, RestrictionFlags.ALL, chemicalsOut, chemicalTagIdsOut, chemicalNamespacesOut);
+    }
+
+    public static void accumulateRecipeEntry(
+            String raw, RestrictionFlags flags, Map<Identifier, RestrictionFlags> recipesOut) {
         if (raw == null) {
             return;
         }
@@ -295,23 +347,20 @@ public record StageDefinition(
         }
         Identifier recipeId = Identifier.tryParse(trimmed);
         if (recipeId != null) {
-            recipesOut.add(recipeId);
+            mergeFlags(recipesOut, recipeId, flags == null ? RestrictionFlags.ALL : flags);
         }
     }
 
-    static void addDimensionNamespace(Set<String> namespacesOut, String raw) {
-        addNamespace(namespacesOut, raw);
+    public static void accumulateRecipeEntry(String raw, Map<Identifier, RestrictionFlags> recipesOut) {
+        accumulateRecipeEntry(raw, RestrictionFlags.ALL, recipesOut);
     }
 
-    /**
-     * Dimension id, {@code #dimension_tag}, or {@code @} mod namespace for every loaded dimension under that
-     * namespace.
-     */
     public static void accumulateDimensionEntry(
             String raw,
-            Set<Identifier> dimensionsOut,
-            Set<Identifier> dimensionTagIdsOut,
-            Set<String> dimensionNamespacesOut) {
+            RestrictionFlags flags,
+            Map<Identifier, RestrictionFlags> dimensionsOut,
+            Map<Identifier, RestrictionFlags> dimensionTagIdsOut,
+            Map<String, RestrictionFlags> dimensionNamespacesOut) {
         if (raw == null) {
             return;
         }
@@ -319,32 +368,41 @@ public record StageDefinition(
         if (trimmed.isEmpty()) {
             return;
         }
+        RestrictionFlags f = flags == null ? RestrictionFlags.ALL : flags;
         if (trimmed.startsWith("#")) {
             Identifier tagId = Identifier.tryParse(trimmed.substring(1).trim());
             if (tagId != null) {
-                dimensionTagIdsOut.add(tagId);
+                mergeFlags(dimensionTagIdsOut, tagId, f);
             }
             return;
         }
         if (trimmed.startsWith("@")) {
-            addDimensionNamespace(dimensionNamespacesOut, trimmed.substring(1));
+            putNamespace(dimensionNamespacesOut, trimmed.substring(1), f);
             return;
         }
         Identifier dimensionId = Identifier.tryParse(trimmed);
         if (dimensionId != null) {
-            dimensionsOut.add(dimensionId);
+            mergeFlags(dimensionsOut, dimensionId, f);
         }
+    }
+
+    public static void accumulateDimensionEntry(
+            String raw,
+            Map<Identifier, RestrictionFlags> dimensionsOut,
+            Map<Identifier, RestrictionFlags> dimensionTagIdsOut,
+            Map<String, RestrictionFlags> dimensionNamespacesOut) {
+        accumulateDimensionEntry(raw, RestrictionFlags.ALL, dimensionsOut, dimensionTagIdsOut, dimensionNamespacesOut);
     }
 
     public boolean matches(ItemStack stack) {
         Identifier key = BuiltInRegistries.ITEM.getKey(stack.getItem());
-        if (items.contains(key)) {
+        if (items.containsKey(key)) {
             return true;
         }
-        if (!namespaces.isEmpty() && namespaces.contains(key.getNamespace())) {
+        if (!namespaces.isEmpty() && namespaces.containsKey(key.getNamespace())) {
             return true;
         }
-        for (TagKey<Item> tag : tags) {
+        for (TagKey<Item> tag : tags.keySet()) {
             if (stack.is(tag)) {
                 return true;
             }
@@ -370,13 +428,13 @@ public record StageDefinition(
         }
 
         Identifier kindKey = fluidKindRegistryKey(stack.getFluid());
-        if (kindKey != null && fluids.contains(kindKey)) {
+        if (kindKey != null && fluids.containsKey(kindKey)) {
             return true;
         }
-        if (kindKey != null && !fluidNamespaces.isEmpty() && fluidNamespaces.contains(kindKey.getNamespace())) {
+        if (kindKey != null && !fluidNamespaces.isEmpty() && fluidNamespaces.containsKey(kindKey.getNamespace())) {
             return true;
         }
-        for (TagKey<Fluid> tag : fluidTags) {
+        for (TagKey<Fluid> tag : fluidTags.keySet()) {
             if (stack.is(tag)) {
                 return true;
             }
@@ -384,20 +442,52 @@ public record StageDefinition(
         return false;
     }
 
+    /** Item ids gated by this stage (flags ignored). */
+    public Set<Identifier> itemIds() {
+        return items.keySet();
+    }
+
+    public Set<Identifier> fluidIds() {
+        return fluids.keySet();
+    }
+
+    public Set<Identifier> recipeIds() {
+        return recipes.keySet();
+    }
+
+    public Set<Identifier> dimensionIds() {
+        return dimensions.keySet();
+    }
+
     public StageDefinition {
         Objects.requireNonNull(id, "id");
-        items = Set.copyOf(items);
-        tags = Set.copyOf(tags);
-        namespaces = Set.copyOf(namespaces);
-        fluids = Set.copyOf(fluids);
-        fluidTags = Set.copyOf(fluidTags);
-        fluidNamespaces = Set.copyOf(fluidNamespaces);
-        chemicals = Set.copyOf(chemicals);
-        chemicalTags = Set.copyOf(chemicalTags);
-        chemicalNamespaces = Set.copyOf(chemicalNamespaces);
-        recipes = Set.copyOf(recipes);
-        dimensions = Set.copyOf(dimensions);
-        dimensionTags = Set.copyOf(dimensionTags);
-        dimensionNamespaces = Set.copyOf(dimensionNamespaces);
+        items = copyFlags(items);
+        tags = copyFlags(tags);
+        namespaces = copyFlags(namespaces);
+        fluids = copyFlags(fluids);
+        fluidTags = copyFlags(fluidTags);
+        fluidNamespaces = copyFlags(fluidNamespaces);
+        chemicals = copyFlags(chemicals);
+        chemicalTags = copyFlags(chemicalTags);
+        chemicalNamespaces = copyFlags(chemicalNamespaces);
+        recipes = copyFlags(recipes);
+        dimensions = copyFlags(dimensions);
+        dimensionTags = copyFlags(dimensionTags);
+        dimensionNamespaces = copyFlags(dimensionNamespaces);
+    }
+
+    private static <K> Map<K, RestrictionFlags> copyFlags(Map<K, RestrictionFlags> source) {
+        if (source == null || source.isEmpty()) {
+            return Map.of();
+        }
+        Map<K, RestrictionFlags> copy = new LinkedHashMap<>(source.size());
+        for (Map.Entry<K, RestrictionFlags> e : source.entrySet()) {
+            copy.put(e.getKey(), e.getValue() == null ? RestrictionFlags.ALL : e.getValue());
+        }
+        return Collections.unmodifiableMap(copy);
+    }
+
+    private static <K> void mergeFlags(Map<K, RestrictionFlags> map, K key, RestrictionFlags flags) {
+        map.merge(key, flags, RestrictionFlags::or);
     }
 }

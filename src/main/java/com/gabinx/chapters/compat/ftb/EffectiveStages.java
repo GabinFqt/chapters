@@ -1,5 +1,6 @@
 package com.gabinx.chapters.compat.ftb;
 
+import com.gabinx.chapters.ChaptersConfig;
 import com.gabinx.chapters.ChaptersRegistries;
 import com.gabinx.chapters.stage.PlayerStages;
 import net.minecraft.resources.Identifier;
@@ -11,17 +12,19 @@ import java.util.Set;
 /**
  * Single source of truth for "what stages does this player effectively have?".
  * <p>
- * When FTB Teams is loaded, the effective set is the player's current team's
- * {@code TEAM_STAGES} property — so all members of a {@code PartyTeam} share
- * unlocks. Otherwise the per-player {@code PLAYER_STAGES} attachment is used.
+ * When FTB Teams is loaded <em>and</em> {@link ChaptersConfig#syncWithFtbTeams()} is true, the
+ * effective set is the player's current team's {@code TEAM_STAGES} property — so all members of a
+ * {@code PartyTeam} share unlocks. Otherwise the per-player {@code PLAYER_STAGES} attachment is used.
  * <p>
- * Writes follow the same routing: when in a team, mutations are pushed to the
- * team's {@code TEAM_STAGES}; otherwise to the attachment. The class never
- * touches FTB classes directly — it delegates to {@link FtbTeamsBridge} which
- * is only loaded when FTB Teams is present.
+ * Writes follow the same routing. The class never touches FTB classes directly — it delegates to
+ * {@link FtbTeamsBridge} which is only loaded when FTB Teams is present.
  */
 public final class EffectiveStages {
     private EffectiveStages() {
+    }
+
+    public static boolean useTeamStages() {
+        return ChaptersConfig.syncWithFtbTeams() && FtbCompat.isTeamsLoaded();
     }
 
     /**
@@ -29,7 +32,7 @@ public final class EffectiveStages {
      * set has no effect.
      */
     public static Set<Identifier> of(ServerPlayer player) {
-        if (FtbCompat.isTeamsLoaded()) {
+        if (useTeamStages()) {
             Set<Identifier> teamView = FtbTeamsBridge.viewStages(player);
             if (teamView != null) {
                 return teamView;
@@ -47,7 +50,7 @@ public final class EffectiveStages {
      * @return {@code true} if the stage was actually added (was not present before).
      */
     public static boolean add(ServerPlayer player, Identifier stage) {
-        if (FtbCompat.isTeamsLoaded() && FtbTeamsBridge.hasTeam(player)) {
+        if (useTeamStages() && FtbTeamsBridge.hasTeam(player)) {
             return FtbTeamsBridge.addStage(player, stage);
         }
         PlayerStages stages = player.getData(ChaptersRegistries.PLAYER_STAGES.get());
@@ -62,7 +65,7 @@ public final class EffectiveStages {
      * @return {@code true} if the stage was actually removed (was present before).
      */
     public static boolean remove(ServerPlayer player, Identifier stage) {
-        if (FtbCompat.isTeamsLoaded() && FtbTeamsBridge.hasTeam(player)) {
+        if (useTeamStages() && FtbTeamsBridge.hasTeam(player)) {
             return FtbTeamsBridge.removeStage(player, stage);
         }
         PlayerStages stages = player.getData(ChaptersRegistries.PLAYER_STAGES.get());
@@ -74,7 +77,7 @@ public final class EffectiveStages {
     }
 
     public static boolean has(ServerPlayer player, Identifier stage) {
-        if (FtbCompat.isTeamsLoaded()) {
+        if (useTeamStages()) {
             Boolean teamHas = FtbTeamsBridge.hasStage(player, stage);
             if (teamHas != null) {
                 return teamHas;
@@ -88,6 +91,6 @@ public final class EffectiveStages {
      * the per-player delta packet is redundant and would cause double client refreshes.
      */
     public static boolean shouldEmitPerPlayerDelta(ServerPlayer player) {
-        return !(FtbCompat.isTeamsLoaded() && FtbTeamsBridge.hasTeam(player));
+        return !(useTeamStages() && FtbTeamsBridge.hasTeam(player));
     }
 }

@@ -12,7 +12,9 @@ import com.gabinx.chapters.event.PickupHandler;
 import com.gabinx.chapters.event.PlayerJoinHandler;
 import com.gabinx.chapters.stage.StageManager;
 import net.neoforged.bus.api.IEventBus;
+import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
+import net.neoforged.fml.config.ModConfig;
 import net.neoforged.neoforge.common.NeoForge;
 import net.minecraft.resources.Identifier;
 import net.neoforged.neoforge.event.AddServerReloadListenersEvent;
@@ -26,8 +28,9 @@ public final class Chapters {
     public static final Identifier STAGE_RELOAD_LISTENER_ID =
             Identifier.fromNamespaceAndPath(MOD_ID, "stages");
 
-    public Chapters(IEventBus modBus) {
+    public Chapters(IEventBus modBus, ModContainer container) {
         ChaptersRegistries.register(modBus);
+        container.registerConfig(ModConfig.Type.COMMON, ChaptersConfig.SPEC);
 
         NeoForge.EVENT_BUS.addListener(this::onRegisterCommands);
         NeoForge.EVENT_BUS.addListener(this::onAddReloadListener);

@@ -1,7 +1,11 @@
 package com.gabinx.chapters.compat.kubejs;
 
+import com.gabinx.chapters.logic.RestrictionFlags;
 import com.gabinx.chapters.stage.StageDefinition;
 import com.gabinx.chapters.stage.StageManager;
+import com.google.gson.Gson;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
 import net.minecraft.resources.Identifier;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.item.Item;
@@ -10,24 +14,37 @@ import net.neoforged.neoforge.event.tick.ServerTickEvent;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.LinkedHashSet;
+import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 public final class ChaptersKubeJSBridge {
-    private static final Map<Identifier, Collection<String>> RAW = new ConcurrentHashMap<>();
+    private static final Gson GSON = new Gson();
+    private static final Map<Identifier, List<Object>> RAW = new ConcurrentHashMap<>();
+    private static final Map<Identifier, RestrictionFlags> STAGE_DEFAULTS = new ConcurrentHashMap<>();
     private static volatile boolean flushScheduled;
 
     private ChaptersKubeJSBridge() {
     }
 
-    public static void defineStage(Identifier id, Collection<String> entries) {
+    public static void defineStage(Identifier id, Collection<?> entries) {
+        defineStage(id, entries, RestrictionFlags.ALL);
+    }
+
+    public static void defineStage(Identifier id, Collection<?> entries, RestrictionFlags defaults) {
         RAW.put(id, new ArrayList<>(entries));
+        if (defaults == null || defaults.equals(RestrictionFlags.ALL)) {
+            STAGE_DEFAULTS.remove(id);
+        } else {
+            STAGE_DEFAULTS.put(id, defaults);
+        }
         flushScheduled = true;
     }
 
     public static void clearStage(Identifier id) {
         RAW.remove(id);
+        STAGE_DEFAULTS.remove(id);
         flushScheduled = true;
     }
 
@@ -47,57 +64,84 @@ public final class ChaptersKubeJSBridge {
         var defs = new ArrayList<StageDefinition>();
         for (var entry : RAW.entrySet()) {
             Identifier id = entry.getKey();
-            var items = new LinkedHashSet<Identifier>();
-            var tags = new LinkedHashSet<TagKey<Item>>();
-            var namespaces = new LinkedHashSet<String>();
-            var fluids = new LinkedHashSet<Identifier>();
-            var fluidTags = new LinkedHashSet<TagKey<Fluid>>();
-            var fluidNamespaces = new LinkedHashSet<String>();
-            var chemicals = new LinkedHashSet<Identifier>();
-            var chemicalTags = new LinkedHashSet<Identifier>();
-            var chemicalNamespaces = new LinkedHashSet<String>();
-            var recipes = new LinkedHashSet<Identifier>();
-            var dimensions = new LinkedHashSet<Identifier>();
-            var dimensionTags = new LinkedHashSet<Identifier>();
-            var dimensionNamespaces = new LinkedHashSet<String>();
+            RestrictionFlags defaults = STAGE_DEFAULTS.getOrDefault(id, RestrictionFlags.ALL);
+            defs.add(buildDefinition(id, entry.getValue(), defaults));
+        }
+        StageManager.get().setRuntimeDefinitions(defs);
+    }
 
-            for (String raw : entry.getValue()) {
-                if (raw != null && raw.regionMatches(true, 0, "fluid:", 0, 6)) {
-                    StageDefinition.accumulateFluidEntry(raw.substring(6).trim(), fluids, fluidTags, fluidNamespaces);
-                } else if (raw != null && raw.regionMatches(true, 0, "chemical:", 0, 9)) {
-                    StageDefinition.accumulateChemicalEntry(raw.substring(9).trim(), chemicals, chemicalTags, chemicalNamespaces);
-                } else if (raw != null && raw.regionMatches(true, 0, "recipe:", 0, 7)) {
-                    StageDefinition.accumulateRecipeEntry(raw.substring(7).trim(), recipes);
-                } else if (raw != null && raw.regionMatches(true, 0, "dimension:", 0, 10)) {
-                    StageDefinition.accumulateDimensionEntry(
-                            raw.substring(10).trim(), dimensions, dimensionTags, dimensionNamespaces);
-                } else {
-                    StageDefinition.accumulateEntry(raw, items, tags, namespaces);
-                    // Match items: `@mod_id` gates every fluid and Mekanism chemical in that namespace too.
-                    if (raw != null && raw.trim().startsWith("@")) {
-                        StageDefinition.accumulateFluidEntry(raw.trim(), fluids, fluidTags, fluidNamespaces);
-                        StageDefinition.accumulateChemicalEntry(raw.trim(), chemicals, chemicalTags, chemicalNamespaces);
-                    }
+    private static StageDefinition buildDefinition(
+            Identifier id, Collection<?> entries, RestrictionFlags defaults) {
+        var items = new LinkedHashMap<Identifier, RestrictionFlags>();
+        var tags = new LinkedHashMap<TagKey<Item>, RestrictionFlags>();
+        var namespaces = new LinkedHashMap<String, RestrictionFlags>();
+        var fluids = new LinkedHashMap<Identifier, RestrictionFlags>();
+        var fluidTags = new LinkedHashMap<TagKey<Fluid>, RestrictionFlags>();
+        var fluidNamespaces = new LinkedHashMap<String, RestrictionFlags>();
+        var chemicals = new LinkedHashMap<Identifier, RestrictionFlags>();
+        var chemicalTags = new LinkedHashMap<Identifier, RestrictionFlags>();
+        var chemicalNamespaces = new LinkedHashMap<String, RestrictionFlags>();
+        var recipes = new LinkedHashMap<Identifier, RestrictionFlags>();
+        var dimensions = new LinkedHashMap<Identifier, RestrictionFlags>();
+        var dimensionTags = new LinkedHashMap<Identifier, RestrictionFlags>();
+        var dimensionNamespaces = new LinkedHashMap<String, RestrictionFlags>();
+
+        for (Object lock : entries) {
+            if (lock == null) {
+                continue;
+            }
+            String raw;
+            RestrictionFlags flags = defaults;
+            if (lock instanceof Map<?, ?> map) {
+                JsonObject obj = GSON.toJsonTree(map).getAsJsonObject();
+                JsonElement idEl = obj.has("id") ? obj.get("id") : obj.get("item");
+                if (idEl == null || !idEl.isJsonPrimitive()) {
+                    continue;
                 }
+                raw = idEl.getAsString();
+                flags = defaults.withOverrides(obj);
+            } else {
+                raw = lock.toString();
+            }
+            if (raw == null) {
+                continue;
             }
 
-            defs.add(new StageDefinition(
-                    id,
-                    items,
-                    tags,
-                    namespaces,
-                    fluids,
-                    fluidTags,
-                    fluidNamespaces,
-                    chemicals,
-                    chemicalTags,
-                    chemicalNamespaces,
-                    recipes,
-                    dimensions,
-                    dimensionTags,
-                    dimensionNamespaces));
+            if (raw.regionMatches(true, 0, "fluid:", 0, 6)) {
+                StageDefinition.accumulateFluidEntry(
+                        raw.substring(6).trim(), flags, fluids, fluidTags, fluidNamespaces);
+            } else if (raw.regionMatches(true, 0, "chemical:", 0, 9)) {
+                StageDefinition.accumulateChemicalEntry(
+                        raw.substring(9).trim(), flags, chemicals, chemicalTags, chemicalNamespaces);
+            } else if (raw.regionMatches(true, 0, "recipe:", 0, 7)) {
+                StageDefinition.accumulateRecipeEntry(raw.substring(7).trim(), flags, recipes);
+            } else if (raw.regionMatches(true, 0, "dimension:", 0, 10)) {
+                StageDefinition.accumulateDimensionEntry(
+                        raw.substring(10).trim(), flags, dimensions, dimensionTags, dimensionNamespaces);
+            } else {
+                StageDefinition.accumulateEntry(raw, flags, items, tags, namespaces);
+                if (raw.trim().startsWith("@")) {
+                    StageDefinition.accumulateFluidEntry(raw.trim(), flags, fluids, fluidTags, fluidNamespaces);
+                    StageDefinition.accumulateChemicalEntry(
+                            raw.trim(), flags, chemicals, chemicalTags, chemicalNamespaces);
+                }
+            }
         }
 
-        StageManager.get().setRuntimeDefinitions(defs);
+        return new StageDefinition(
+                id,
+                items,
+                tags,
+                namespaces,
+                fluids,
+                fluidTags,
+                fluidNamespaces,
+                chemicals,
+                chemicalTags,
+                chemicalNamespaces,
+                recipes,
+                dimensions,
+                dimensionTags,
+                dimensionNamespaces);
     }
 }

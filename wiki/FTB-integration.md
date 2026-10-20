@@ -1,6 +1,15 @@
 # FTB Library / FTB Teams / FTB Quests
 
-Chapters auto-detects [FTB Library], [FTB Teams], and [FTB Quests] at runtime: no config flag, no extra command. Drop the FTB jars into the same instance as Chapters and the integration boots itself. If any of them is missing, the corresponding feature is silently skipped (Chapters falls back to per-player attachment storage).
+Chapters auto-detects [FTB Library], [FTB Teams], and [FTB Quests] at runtime. Drop the FTB jars into the same instance as Chapters and the integration boots itself. If any of them is missing, the corresponding feature is silently skipped (Chapters falls back to per-player attachment storage).
+
+Team-wide unlocks with FTB Teams are **on by default**. To run Chapters in standalone mode while FTB Teams is still installed (per-player attachment only), set in `config/chapters-common.toml`:
+
+```toml
+[ftb]
+	syncWithFtbTeams = false
+```
+
+FTB Library / Quests Stage Reward and Stage Task keep working either way (they call into Chapters' API, which then writes to the attachment or the team store according to this flag).
 
 Works on both **Minecraft 1.21** (Chapters **1.x**) and **Minecraft 26** (Chapters **2.x**) when matching FTB builds are installed.
 
@@ -60,7 +69,7 @@ Sample script:
 
 ## Notes for pack authors
 
-- The integration is opt-in by **mod presence**, not by config. Authors who don't ship FTB get the original per-player behaviour.
+- Team sync is opt-in by **mod presence** plus the `syncWithFtbTeams` config (default `true`). Authors who don't ship FTB get the original per-player behaviour.
 - FTB Library, FTB Teams, FTB Quests are all declared as `optional` dependencies. None are required to load Chapters.
 - If you only need Stage Reward / Stage Task / "Stage Required", install **FTB Library + FTB Quests**. FTB Teams is only required for team-wide unlock sharing.
 - Chapters' own `/chapters reload` only refreshes stage **definitions**; it does not touch FTB Teams' stored team stages. To wipe team stages use FTB Teams' own commands.

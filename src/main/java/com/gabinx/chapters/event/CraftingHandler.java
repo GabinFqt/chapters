@@ -1,6 +1,7 @@
 package com.gabinx.chapters.event;
 
 import com.gabinx.chapters.logic.CraftGate;
+import com.gabinx.chapters.logic.Restriction;
 import com.gabinx.chapters.stage.LockResolver;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
@@ -25,7 +26,7 @@ public final class CraftingHandler {
         }
 
         ItemStack crafted = event.getCrafting();
-        boolean itemLocked = !crafted.isEmpty() && LockResolver.isLocked(player, crafted);
+        boolean itemLocked = !crafted.isEmpty() && LockResolver.isRestricted(player, crafted, Restriction.CRAFT);
         boolean recipeLocked =
                 crafted.isEmpty() ? false : isCraftingRecipeLocked(player, event.getInventory(), crafted);
 
@@ -61,7 +62,9 @@ public final class CraftingHandler {
                         RecipeType.CRAFTING,
                         crafting.asCraftInput(),
                         player.level()).map(holder -> holder.id().identifier());
-        return recipeId.map(id -> LockResolver.isRecipeLocked(player, id)).orElse(false);
+        return recipeId
+                .map(id -> LockResolver.isRecipeRestricted(player, id, Restriction.CRAFT))
+                .orElse(false);
     }
 
     private static int removeFromCarriedStack(ServerPlayer player, ItemStack target, int amount) {

@@ -40,6 +40,9 @@ final class FtbTeamsListeners {
     }
 
     private static void onPropertiesChanged(FTBTeamsEvent.TeamPropertiesChanged event) {
+        if (!EffectiveStages.useTeamStages()) {
+            return;
+        }
         TeamPropertiesChangedEvent.Data data = event.getEventData();
         Team team = data.team();
         if (team == null || team.isClientTeam() || data.isClient()) {
@@ -52,6 +55,9 @@ final class FtbTeamsListeners {
     }
 
     private static void onPlayerChangedTeam(FTBTeamsEvent.PlayerChangedTeam event) {
+        if (!EffectiveStages.useTeamStages()) {
+            return;
+        }
         ServerPlayer player = event.getEventData().player();
         if (player == null) {
             return;
@@ -66,6 +72,9 @@ final class FtbTeamsListeners {
      * so every online member sees the merged set.
      */
     private static void onJoinedParty(FTBTeamsEvent.PlayerJoinedPartyTeam event) {
+        if (!EffectiveStages.useTeamStages()) {
+            return;
+        }
         var data = event.getEventData();
         Team party = data.team();
         Team previous = data.previousTeam();
@@ -99,6 +108,9 @@ final class FtbTeamsListeners {
      * everything they had while in the party, but are no longer synced with the party afterward.
      */
     private static void onLeftParty(FTBTeamsEvent.PlayerLeftPartyTeam event) {
+        if (!EffectiveStages.useTeamStages()) {
+            return;
+        }
         var data = event.getEventData();
         Team party = data.team();
         Team personal = data.playerTeam();
@@ -130,6 +142,9 @@ final class FtbTeamsListeners {
      * personal stages into a shared party.
      */
     private static void onPlayerLoggedIn(FTBTeamsEvent.TeamPlayerLoggedIn event) {
+        if (!EffectiveStages.useTeamStages()) {
+            return;
+        }
         var data = event.getEventData();
         ServerPlayer player = data.player();
         if (player == null) {

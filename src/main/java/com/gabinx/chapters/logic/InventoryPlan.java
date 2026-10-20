@@ -41,6 +41,7 @@ public final class InventoryPlan {
             StageBook book,
             Set<Identifier> ownedStages
     ) {
-        return slotsToDrop(slotItemIds, itemId -> book.isItemLocked(itemId, ownedStages));
+        return slotsToDrop(
+                slotItemIds, itemId -> book.isItemOrFluidBucketRestricted(itemId, ownedStages, Restriction.INVENTORY));
     }
 }

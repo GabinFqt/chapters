@@ -1,6 +1,7 @@
 package com.gabinx.chapters.mixin;
 
 import com.gabinx.chapters.logic.CraftGate;
+import com.gabinx.chapters.logic.Restriction;
 import com.gabinx.chapters.stage.LockResolver;
 
 import net.minecraft.resources.Identifier;
@@ -51,8 +52,10 @@ public abstract class CraftingMenuMixin {
                 .getRecipeManager()
                 .getRecipeFor(RecipeType.CRAFTING, input, level, recipe);
         Identifier recipeId = resolved.map(holder -> holder.id().identifier()).orElse(null);
-        boolean outputLocked = !result.isEmpty() && LockResolver.isLocked(serverPlayer, result);
-        boolean recipeLocked = recipeId != null && LockResolver.isRecipeLocked(serverPlayer, recipeId);
+        boolean outputLocked =
+                !result.isEmpty() && LockResolver.isRestricted(serverPlayer, result, Restriction.CRAFT);
+        boolean recipeLocked =
+                recipeId != null && LockResolver.isRecipeRestricted(serverPlayer, recipeId, Restriction.CRAFT);
         if (!CraftGate.shouldBlock(outputLocked, recipeLocked)) {
             return;
         }

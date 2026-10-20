@@ -30,6 +30,39 @@ Anything you don’t need can be omitted.
 | `namespaces` | List of mod ids; same broad effect as adding **`@`** for items **and** fluids **and** chemicals for each |
 | `fluid_namespaces` | Extra mod ids that only add fluid locks |
 | `chemical_namespaces` | Extra mod ids that only add chemical locks |
+| `restrictions` | Optional stage-wide defaults for lock behaviours (all `true` if omitted). See below. |
+
+List entries may be plain strings (legacy) or objects with an `id` plus per-entry overrides, e.g. `{ "id": "minecraft:emerald", "jei": false }`.
+
+### Restriction flags
+
+Every gated content id inherits these behaviours while the player lacks the stage. Defaults are all **`true`** (same as older Chapters builds). Set a flag to `false` on the stage (`restrictions`) or on one entry to disable that behaviour for that content.
+
+| Flag | Effect |
+| --- | --- |
+| `pickup` | Block picking the item up from the world |
+| `inventory` | Auto-drop the item from the player inventory |
+| `craft` | Block crafting the item (or a locked recipe id) on the vanilla crafting grid |
+| `jei` | Hide the ingredient / recipe in JEI |
+| `transfer` | Block fluid / chemical tank transfers (and related bucket place/fill) |
+| `travel` | Block travel into a locked dimension |
+
+Example: lock diamond fully, but keep emerald visible in JEI and allow carrying it:
+
+```json
+{
+  "restrictions": {
+    "pickup": true,
+    "inventory": true,
+    "craft": true,
+    "jei": true
+  },
+  "items": [
+    "minecraft:diamond",
+    { "id": "minecraft:emerald", "jei": false, "inventory": false }
+  ]
+}
+```
 
 ## Prefix quick reference
 

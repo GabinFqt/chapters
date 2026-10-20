@@ -18,13 +18,13 @@ public final class RecipeViewerCompat {
 
     public static void refresh() {
         Set<Identifier> active = ClientStageCache.snapshot();
-        Set<Identifier> lockedFluids = ClientStageView.computeLocked(ClientStageIndices.fluidsView(), active);
-        Set<Identifier> lockedItems = ClientStageView.computeLocked(ClientStageIndices.itemsView(), active);
+        Set<Identifier> lockedFluids = ClientStageView.computeLocked(ClientStageIndices.fluidJeiView(), active);
+        Set<Identifier> lockedItems = ClientStageView.computeLocked(ClientStageIndices.itemJeiView(), active);
         for (Identifier fluidId : lockedFluids) {
             lockedItems.addAll(RegistryContentCatalog.INSTANCE.bucketItemsForFluid(fluidId));
         }
-        Set<Identifier> lockedChemicals = ClientStageView.computeLocked(ClientStageIndices.chemicalsView(), active);
-        Set<Identifier> lockedRecipes = ClientStageView.computeLocked(ClientStageIndices.recipesView(), active);
+        Set<Identifier> lockedChemicals = ClientStageView.computeLocked(ClientStageIndices.chemicalJeiView(), active);
+        Set<Identifier> lockedRecipes = ClientStageView.computeLocked(ClientStageIndices.recipeJeiView(), active);
         Chapters.LOGGER.debug(
                 "Recipe viewer refresh — locked items: {}, locked fluids: {}, locked chemicals: {}, locked recipes: {}",
                 lockedItems.size(),

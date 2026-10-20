@@ -2,6 +2,7 @@ package com.gabinx.chapters.event;
 
 import com.gabinx.chapters.Chapters;
 import com.gabinx.chapters.logic.DimensionGate;
+import com.gabinx.chapters.logic.Restriction;
 import com.gabinx.chapters.stage.LockResolver;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
@@ -53,7 +54,7 @@ public final class DimensionHandler {
 
     private static boolean tryBlockPlayerTravel(ServerPlayer player, ResourceKey<Level> destination) {
         Identifier destId = destination.identifier();
-        boolean locked = LockResolver.isDimensionLocked(player, destId);
+        boolean locked = LockResolver.isDimensionRestricted(player, destId, Restriction.TRAVEL);
         if (!DimensionGate.shouldBlockTravel(locked, false)) {
             return false;
         }
@@ -67,8 +68,8 @@ public final class DimensionHandler {
         }
         Identifier currentId = player.level().dimension().identifier();
         Identifier overworldId = Level.OVERWORLD.identifier();
-        boolean currentLocked = LockResolver.isDimensionLocked(player, currentId);
-        boolean overworldLocked = LockResolver.isDimensionLocked(player, overworldId);
+        boolean currentLocked = LockResolver.isDimensionRestricted(player, currentId, Restriction.TRAVEL);
+        boolean overworldLocked = LockResolver.isDimensionRestricted(player, overworldId, Restriction.TRAVEL);
         if (!DimensionGate.shouldEject(currentLocked, overworldLocked)) {
             if (currentLocked && overworldLocked) {
                 Chapters.LOGGER.warn(

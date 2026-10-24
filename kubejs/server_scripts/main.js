@@ -23,7 +23,8 @@ ServerEvents.loaded(event => {
       'minecraft:apple',
     ],
   )
-  ChaptersEvents.defineStage('chapters:script_vanilla_all', ['@minecraft', '@mekanism'])
+  // Disabled during flags E2E (would unlock ALL vanilla via OR). Re-enable for smoke tests.
+  // ChaptersEvents.defineStage('chapters:script_vanilla_all', ['@minecraft', '@mekanism'])
 
   // Mekanism example (needs Mekanism): hydrogen is gated until `/chapters add <player> chapters:script_mek_hydrogen`
   ChaptersEvents.defineStage(

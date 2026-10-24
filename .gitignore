@@ -31,6 +31,7 @@ scripts/
 
 # Local-only manual test plans / dev notes (kept on disk, not tracked).
 testing/
+kubejs/server_scripts/flags_e2e.js
 
 # Accidentally vendored sources (do not commit)
 net/

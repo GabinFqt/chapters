@@ -1,4 +1,5 @@
 import java.nio.file.Files
+import java.nio.file.LinkOption
 import java.nio.file.Path
 
 plugins {
@@ -126,25 +127,64 @@ val linkKubejs by tasks.registering {
 
     doLast {
         Files.createDirectories(rootKubejs)
+        val rootAbs = rootKubejs.toAbsolutePath().normalize()
         for (link in targets) {
             Files.createDirectories(link.parent)
-            val expectedTarget: Path = link.parent.relativize(rootKubejs)
-            if (Files.isSymbolicLink(link)) {
-                if (Files.readSymbolicLink(link) == expectedTarget) {
-                    continue
-                }
-                Files.delete(link)
-            } else if (Files.exists(link)) {
-                logger.warn("Skipping $link: not a symlink (move it aside if you want it overwritten).")
+            val expectedRelative: Path = link.parent.relativize(rootKubejs)
+
+            // Windows + WSL-copied reparse points: exists()/isSymbolicLink() can disagree; always clear first if needed.
+            val alreadyOk = try {
+                Files.isSymbolicLink(link) && Files.readSymbolicLink(link) == expectedRelative
+            } catch (_: Exception) {
+                false
+            }
+            if (alreadyOk) {
                 continue
             }
+
+            fun removeLinkOrDir(path: Path) {
+                if (!Files.exists(path, LinkOption.NOFOLLOW_LINKS) && !Files.isSymbolicLink(path)) {
+                    return
+                }
+                if (Files.isDirectory(path) && !Files.isSymbolicLink(path)) {
+                    path.toFile().deleteRecursively()
+                } else {
+                    Files.deleteIfExists(path)
+                }
+            }
+
             try {
-                Files.createSymbolicLink(link, expectedTarget)
-                logger.lifecycle("Linked $link -> $expectedTarget")
-            } catch (e: UnsupportedOperationException) {
-                logger.warn("Symlinks unsupported on this filesystem; copy kubejs/ manually into $link.")
-            } catch (e: SecurityException) {
-                logger.warn("No permission to create symlink at $link: ${e.message}")
+                removeLinkOrDir(link)
+            } catch (e: Exception) {
+                logger.warn("Could not clear $link before linking: ${e.message}")
+            }
+
+            var linked = false
+            try {
+                Files.createSymbolicLink(link, expectedRelative)
+                logger.lifecycle("Linked $link -> $expectedRelative")
+                linked = true
+            } catch (e: Exception) {
+                // Windows often blocks symlinks without Developer Mode; junctions work without elevation.
+                if (System.getProperty("os.name").lowercase().contains("windows")) {
+                    try {
+                        removeLinkOrDir(link)
+                        val code = ProcessBuilder("cmd", "/c", "mklink", "/J", link.toAbsolutePath().toString(), rootAbs.toString())
+                            .redirectErrorStream(true)
+                            .start()
+                            .also { it.inputStream.bufferedReader().use { r -> r.lines().forEach { line -> logger.lifecycle(line) } } }
+                            .waitFor()
+                        if (code == 0) {
+                            logger.lifecycle("Junction $link -> $rootAbs")
+                            linked = true
+                        }
+                    } catch (junctionError: Exception) {
+                        logger.warn("Junction fallback failed for $link: ${junctionError.message}")
+                    }
+                }
+                if (!linked) {
+                    logger.warn("Could not link $link (${e.message}). Ensure $link points at project kubejs/.")
+                }
             }
         }
     }

@@ -22,10 +22,10 @@ public final class ChaptersEventsBinding {
      * Optional {@code recipe:} prefix locks a recipe by id only ({@code recipe:minecraft:diamond_pickaxe}); the output item can stay visible if not otherwise locked.
      * Optional {@code dimension:} prefix locks a dimension by id ({@code dimension:minecraft:the_nether}, {@code dimension:#ns:tag}, {@code dimension:@modid}).
      * <p>
-     * Object entries are also accepted: {@code { id: 'minecraft:diamond', jei: false }}.
+     * Object entries are also accepted: {@code { id: 'minecraft:diamond', hideInJei: false }}.
      * <p>
      * Optional third argument: stage-wide restriction defaults, e.g.
-     * {@code defineStage('mypack:tier1', ['minecraft:diamond'], { jei: false })}.
+     * {@code defineStage('mypack:tier1', ['minecraft:diamond'], { hideInJei: false })}.
      */
     public void defineStage(String id, Collection<?> locks) {
         defineStage(id, locks, null);

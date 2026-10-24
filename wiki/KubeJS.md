@@ -38,8 +38,8 @@ PlayerStages.of(player).add('mypack:tier1')
 | Argument | Meaning |
 | --- | --- |
 | `stageId` | String like `'mypack:tier2'` |
-| `entries` | Array of strings **or** objects `{ id: '…', jei: false, … }` |
-| `restrictions` | Optional stage-wide flag defaults, e.g. `{ jei: false, inventory: false }` |
+| `entries` | Array of strings **or** objects `{ id: '…', hideInJei: false, … }` |
+| `restrictions` | Optional stage-wide flag defaults, e.g. `{ hideInJei: false, dropFromInventory: false }` |
 
 ### Entry prefixes
 
@@ -53,7 +53,7 @@ PlayerStages.of(player).add('mypack:tier1')
 | `'recipe:minecraft:diamond_pickaxe'` | Recipe registry id (vanilla crafting grid + JEI) |
 | `'dimension:minecraft:the_nether'` | Dimension (`'dimension:#ns:tag'`, `'dimension:@modid'`) |
 
-Object form: `{ id: 'minecraft:emerald', jei: false, inventory: false }` (alias key `item` also accepted). Starts from stage `restrictions`, then applies only the keys you set.
+Object form: `{ id: 'minecraft:emerald', hideInJei: false, dropFromInventory: false }` (alias key `item` also accepted). Starts from stage `restrictions`, then applies only the keys you set.
 
 Many `defineStage` calls in the **same server tick** are batched so indexing stays fast after load.
 
@@ -66,21 +66,21 @@ ServerEvents.loaded(() => {
     'mypack:copper_era',
     [
       'minecraft:copper_ingot',
-      { id: 'minecraft:raw_copper', pickup: false }
+      { id: 'minecraft:raw_copper', preventPickup: false }
     ],
-    { pickup: true, inventory: false, craft: true, jei: false }
+    { preventPickup: true, dropFromInventory: false, preventCraft: true, hideInJei: false }
   )
 
   // Quest tease: show netherite in JEI, still hard-lock gameplay
   ChaptersEvents.defineStage(
     'mypack:tease_netherite',
     ['minecraft:netherite_ingot'],
-    { jei: false }
+    { hideInJei: false }
   )
 
   // Fluid with transfer off (still a defining stage / JEI hide if jei true)
   ChaptersEvents.defineStage('mypack:water_sight', [
-    { id: 'fluid:minecraft:water', transfer: false, jei: true }
+    { id: 'fluid:minecraft:water', preventTransfer: false, hideInJei: true }
   ])
 })
 ```

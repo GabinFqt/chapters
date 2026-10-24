@@ -2,36 +2,39 @@
 
 Pack authors can toggle **which behaviours** a locked stage enforces. Defaults match older Chapters builds: **every flag is `true`**, so a stage that only lists `'minecraft:diamond'` still fully gates that diamond.
 
+Flag names describe what is **turned on** while the content stays locked (`preventPickup: true` = pickup blocked, `hideInJei: true` = hidden in JEI).
+
 **Preferred authoring path: [[KubeJS]]** (`ChaptersEvents.defineStage`). Datapack JSON supports the same flags; see [[Stages-datapack]] if you ship stages without scripts.
 
 Flags live on:
 
 1. **Stage-wide defaults**: third argument of `defineStage(id, entries, restrictions)`, or the `"restrictions"` object in a datapack file.
-2. **Per-entry overrides**: objects in the entries array, e.g. `{ id: 'minecraft:emerald', jei: false }`.
+2. **Per-entry overrides**: objects in the entries array, e.g. `{ id: 'minecraft:emerald', hideInJei: false }`.
 
 Missing keys leave the base value unchanged.
+
 
 ---
 
 ## Flag reference
 
-| Flag | Typical content | What it blocks while locked |
+| Flag | Typical content | What it does while locked (`true`) |
 | --- | --- | --- |
-| `pickup` | Items | Picking the item up from the world |
-| `inventory` | Items (and filled buckets of gated fluids) | Auto-drop from the player inventory (auditor) |
-| `craft` | Items **or** recipe ids | Vanilla crafting-grid result / recipe |
-| `jei` | Items, fluids, chemicals, recipes | Hiding in JEI (client) |
-| `transfer` | Fluids, chemicals | Tank transfers, bucket place/fill, related fluid util paths |
-| `travel` | Dimensions | Entering the dimension / ejecting players already inside |
+| `preventPickup` | Items | Blocks picking the item up from the world |
+| `dropFromInventory` | Items (and filled buckets of gated fluids) | Auto-drops the item from the player inventory (auditor) |
+| `preventCraft` | Items **or** recipe ids | Blocks vanilla crafting-grid result / recipe |
+| `hideInJei` | Items, fluids, chemicals, recipes | Hides the content in JEI (client) |
+| `preventTransfer` | Fluids, chemicals | Blocks tank transfers, bucket place/fill, related fluid util paths |
+| `preventTravel` | Dimensions | Blocks entering the dimension / ejects players already inside |
 
-Flags are **independent**. Turning `inventory` off does **not** turn off `pickup` or `craft`. A common pattern is “can hold, cannot craft, still visible in JEI”:
+Flags are **independent**. Turning `dropFromInventory` off does **not** turn off `preventPickup` or `preventCraft`. A common pattern is “can hold, cannot craft, still visible in JEI”:
 
 ```js
 ServerEvents.loaded(() => {
   ChaptersEvents.defineStage(
     'mypack:soft_copper',
     ['minecraft:copper_ingot'],
-    { pickup: true, inventory: false, craft: true, jei: false }
+    { preventPickup: true, dropFromInventory: false, preventCraft: true, hideInJei: false }
   )
 })
 ```
@@ -71,17 +74,17 @@ Every entry accepts the six flag names, but **only the matching handler reads th
 
 | Entry kind (KubeJS prefix) | Flags that actually do something |
 | --- | --- |
-| Item (`'minecraft:…'`, `'#tag'`, `'@mod'`) | `pickup`, `inventory`, `craft`, `jei` |
-| Fluid (`'fluid:…'`) | `transfer`, `jei` (filled buckets inherit fluid gates for inventory / JEI bucket hide) |
-| Chemical (`'chemical:…'`, when Mekanism compat is active) | `transfer`, `jei` |
-| Recipe (`'recipe:…'`) | `craft`, `jei` |
-| Dimension (`'dimension:…'`) | `travel` |
+| Item (`'minecraft:…'`, `'#tag'`, `'@mod'`) | `preventPickup`, `dropFromInventory`, `preventCraft`, `hideInJei` |
+| Fluid (`'fluid:…'`) | `preventTransfer`, `hideInJei` (filled buckets inherit fluid gates for inventory / JEI bucket hide) |
+| Chemical (`'chemical:…'`, when Mekanism compat is active) | `preventTransfer`, `hideInJei` |
+| Recipe (`'recipe:…'`) | `preventCraft`, `hideInJei` |
+| Dimension (`'dimension:…'`) | `preventTravel` |
 
 Examples of no-ops that still parse cleanly:
 
-- `{ id: 'minecraft:diamond', travel: false }` does nothing useful (`travel` is for dimensions).
-- `{ id: 'dimension:minecraft:the_end', pickup: false }` does nothing useful.
-- A dimension with `{ id: 'dimension:minecraft:the_nether', travel: false }`: still a defining unlock key, but travel is allowed.
+- `{ id: 'minecraft:diamond', preventTravel: false }` does nothing useful (`preventTravel` is for dimensions).
+- `{ id: 'dimension:minecraft:the_end', preventPickup: false }` does nothing useful.
+- A dimension with `{ id: 'dimension:minecraft:the_nether', preventTravel: false }`: still a defining unlock key, but travel is allowed.
 
 ---
 
@@ -93,15 +96,15 @@ ServerEvents.loaded(() => {
     'mypack:copper_era',
     [
       'minecraft:copper_ingot',
-      { id: 'minecraft:raw_copper', pickup: false }
+      { id: 'minecraft:raw_copper', preventPickup: false }
     ],
-    { jei: false, inventory: false }
+    { hideInJei: false, dropFromInventory: false }
   )
 })
 ```
 
-- String entries inherit the stage defaults (`copper_ingot`: jei false, inventory false, pickup true, …).
-- Object entries start from those defaults, then apply only the keys you set (`raw_copper` keeps jei/inventory false, and sets pickup false). Use `id` or `item`.
+- String entries inherit the stage defaults (`copper_ingot`: hideInJei false, dropFromInventory false, preventPickup true, …).
+- Object entries start from those defaults, then apply only the keys you set (`raw_copper` keeps hideInJei/dropFromInventory false, and sets preventPickup false). Use `id` or `item`.
 
 ### Explicit id vs tag / namespace (same stage)
 
@@ -110,11 +113,11 @@ Within **one** `defineStage` call, Chapters expands tags and namespaces first, t
 ```js
 ChaptersEvents.defineStage('mypack:planks', [
   '#minecraft:planks',
-  { id: 'minecraft:oak_planks', pickup: false }
+  { id: 'minecraft:oak_planks', preventPickup: false }
 ])
 ```
 
-`oak_planks` gets `pickup: false`. Other planks from the tag keep the stage defaults (usually all true).
+`oak_planks` gets `preventPickup: false`. Other planks from the tag keep the stage defaults (usually all true).
 
 Across **different** stages that list the same id, flags still **OR** while locked, and owning either stage unlocks everything.
 
@@ -124,13 +127,13 @@ Across **different** stages that list the same id, flags still **OR** while lock
 
 ```js
 // Block crafting the diamond item as a result
-ChaptersEvents.defineStage('mypack:no_diamond_craft', ['minecraft:diamond'], { craft: true })
+ChaptersEvents.defineStage('mypack:no_diamond_craft', ['minecraft:diamond'], { preventCraft: true })
 
 // Block one vanilla recipe id even if the output item is unlocked elsewhere
-ChaptersEvents.defineStage('mypack:no_pick_recipe', ['recipe:minecraft:diamond_pickaxe'], { craft: true })
+ChaptersEvents.defineStage('mypack:no_pick_recipe', ['recipe:minecraft:diamond_pickaxe'], { preventCraft: true })
 ```
 
-- `craft: false` means Chapters will not block that path (JEI may still hide if `jei` stays true).
+- `preventCraft: false` means Chapters will not block that path (JEI may still hide if `hideInJei` stays true).
 - Other machines (smithing, mod crafters) are **not** covered the same way. See [[JEI-and-limitations]].
 
 ---
@@ -140,21 +143,21 @@ ChaptersEvents.defineStage('mypack:no_pick_recipe', ['recipe:minecraft:diamond_p
 ```js
 ChaptersEvents.defineStage('mypack:fluids', [
   'fluid:minecraft:lava',
-  { id: 'fluid:minecraft:water', transfer: false, jei: true }
+  { id: 'fluid:minecraft:water', preventTransfer: false, hideInJei: true }
 ])
 ```
 
-With a locked fluid and `transfer: true` (default):
+With a locked fluid and `preventTransfer: true` (default):
 
 - Players cannot freely fill/empty / transfer that fluid through Chapters’ fluid gates.
-- Filled buckets are treated as locked for **inventory** drops when the fluid is inventory-restricted.
-- JEI can hide the fluid and its bucket when `jei` is true.
+- Filled buckets are treated as locked for **inventory** drops when the fluid has `dropFromInventory`.
+- JEI can hide the fluid and its bucket when `hideInJei` is true.
 
-With `transfer: false`:
+With `preventTransfer: false`:
 
 - The fluid can still appear in the lock index (owning a listing stage still unlocks it).
 - Bucket place/fill and tank transfers are **not** blocked by Chapters for that fluid.
-- Client prediction (Minecraft **26** bucket mixins) follows the same `transfer` rule as the server.
+- Client prediction (Minecraft **26** bucket mixins) follows the same `preventTransfer` rule as the server.
 
 Automation / null-player fluid moves are intentionally less gated than player GUI transfers. Chemical GUI transfers follow the same idea when Mekanism compat is on (`'chemical:…'` entries).
 
@@ -162,13 +165,13 @@ Automation / null-player fluid moves are intentionally less gated than player GU
 
 ## JEI vs gameplay
 
-`jei: false` means: **do not hide** this content in JEI, while other flags can still gate gameplay.
+`hideInJei: false` means: **do not hide** this content in JEI, while other flags can still gate gameplay.
 
 | Situation | Gameplay | JEI |
 | --- | --- | --- |
-| Owns no defining stage; at least one listing has `jei: true` | Restricted per other flags | Hidden |
-| Owns a stage that listed the item (even with `jei: false`) | Fully unlocked | Shown |
-| Only listings have `jei: false` and player owns none | Other flags may still block | Stays visible |
+| Owns no defining stage; at least one listing has `hideInJei: true` | Restricted per other flags | Hidden |
+| Owns a stage that listed the item (even with `hideInJei: false`) | Fully unlocked | Shown |
+| Only listings have `hideInJei: false` and player owns none | Other flags may still block | Stays visible |
 
 Details: [[JEI-and-limitations]].
 
@@ -182,11 +185,11 @@ Details: [[JEI-and-limitations]].
 ChaptersEvents.defineStage(
   'mypack:soft_diamond',
   ['minecraft:diamond'],
-  { inventory: false, jei: false, craft: true, pickup: true }
+  { dropFromInventory: false, hideInJei: false, preventCraft: true, preventPickup: true }
 )
 ```
 
-Players can see and keep diamonds (e.g. from `/give`), but cannot craft them on the vanilla grid. Adjust `pickup` if ground loot should be allowed.
+Players can see and keep diamonds (e.g. from `/give`), but cannot craft them on the vanilla grid. Adjust `preventPickup` if ground loot should be allowed.
 
 ### Quest tease: show in JEI, block everything else
 
@@ -194,11 +197,11 @@ Players can see and keep diamonds (e.g. from `/give`), but cannot craft them on 
 ChaptersEvents.defineStage(
   'mypack:tease_netherite',
   ['minecraft:netherite_ingot'],
-  { jei: false }
+  { hideInJei: false }
 )
 ```
 
-JEI shows the item; pickup / inventory / craft stay enforced (defaults true). Grant with `PlayerStages.of(player).add('mypack:tease_netherite')` from a quest script.
+JEI shows the item; pickup / inventory drop / craft stay enforced (defaults true). Grant with `PlayerStages.of(player).add('mypack:tease_netherite')` from a quest script.
 
 ### Dimension late-game only
 
@@ -215,8 +218,8 @@ ChaptersEvents.defineStage(
   'mypack:docs_only',
   ['minecraft:diamond'],
   {
-    pickup: false, inventory: false, craft: false,
-    jei: false, transfer: false, travel: false
+    preventPickup: false, dropFromInventory: false, preventCraft: false,
+    hideInJei: false, preventTransfer: false, preventTravel: false
   }
 )
 ```

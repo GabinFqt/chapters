@@ -4,8 +4,8 @@
 
 Chapters syncs owned stages plus lock / JEI indices to the client so **JEI listings match what this player may use now**:
 
-- Ingredients and outputs tied to locked content are hidden when the `jei` flag is active for that content.
-- Any recipe whose **id** you locked is hidden in JEI for that player as well (when `jei` remains true).
+- Ingredients and outputs tied to locked content are hidden when the `hideInJei` flag is active for that content.
+- Any recipe whose **id** you locked is hidden in JEI for that player as well (when `hideInJei` remains true).
 - When you unlock a stage, listings catch up automatically (stage delta + index sync).
 
 If JEI is not installed, progression still works server-side; you just don’t get the filtered recipe viewer.
@@ -14,18 +14,18 @@ Works on both **Minecraft 1.21** (Chapters **1.x**) and **Minecraft 26** (Chapte
 
 ---
 
-## The `jei` flag vs gameplay
+## The `hideInJei` flag vs gameplay
 
 Restriction flags are documented in [[Restriction-flags]]. Short version for JEI:
 
-| `jei` value | Meaning |
+| `hideInJei` value | Meaning |
 | --- | --- |
 | `true` (default) | This stage contributes to JEI hiding for that content while the player is still locked |
-| `false` | This stage does **not** ask JEI to hide the content; other flags (`pickup`, `craft`, …) can still gate gameplay |
+| `false` | This stage does **not** ask JEI to hide the content; other flags (`preventPickup`, `preventCraft`, …) can still gate gameplay |
 
-Unlock rule (same as gameplay): owning **any** stage that lists the content unlocks **everything**, including JEI visibility. Chapters does **not** keep an item hidden in JEI after you unlocked it via a `jei: false` stage.
+Unlock rule (same as gameplay): owning **any** stage that lists the content unlocks **everything**, including JEI visibility. Chapters does **not** keep an item hidden in JEI after you unlocked it via a `hideInJei: false` stage.
 
-While still locked, hide happens only if **at least one** defining stage had `jei: true`.
+While still locked, hide happens only if **at least one** defining stage had `hideInJei: true`.
 
 ### Practical patterns (KubeJS)
 
@@ -35,17 +35,17 @@ While still locked, hide happens only if **at least one** defining stage had `je
 ChaptersEvents.defineStage(
   'mypack:tease_netherite',
   ['minecraft:netherite_ingot'],
-  { jei: false }
+  { hideInJei: false }
 )
 ```
 
-**Hide in JEI and block craft, but allow carrying** (`inventory: false`):
+**Hide in JEI and block craft, but allow carrying** (`dropFromInventory: false`):
 
 ```js
 ChaptersEvents.defineStage(
   'mypack:hold_diamond',
   ['minecraft:diamond'],
-  { inventory: false, craft: true, jei: true }
+  { dropFromInventory: false, preventCraft: true, hideInJei: true }
 )
 ```
 
@@ -55,9 +55,9 @@ More recipes: [[Restriction-flags]] · [[KubeJS]].
 
 ## Vanilla crafting grid vs other machines
 
-Chapters stops **blocked recipe ids and craft-gated outputs on the vanilla 2×2 / 3×3 crafting grid** (`CraftingMenu` + craft undo): if a recipe or result is gated with `craft: true` and the player lacks a defining stage, the result should not craft there.
+Chapters stops **blocked recipe ids and craft-gated outputs on the vanilla 2×2 / 3×3 crafting grid** (`CraftingMenu` + craft undo): if a recipe or result is gated with `preventCraft: true` and the player lacks a defining stage, the result should not craft there.
 
-Other stations (**smithing, mod machines**, etc.) **are not guarded the same way** today. Someone might craft an item elsewhere even if **JEI** hides the vanilla recipe entry. Combine with item / fluid locks, `inventory` drops, or quest-gated workshop access if you need a hard barrier.
+Other stations (**smithing, mod machines**, etc.) **are not guarded the same way** today. Someone might craft an item elsewhere even if **JEI** hides the vanilla recipe entry. Combine with item / fluid locks, `dropFromInventory` drops, or quest-gated workshop access if you need a hard barrier.
 
 Recipe-id locks (`"recipes": ["minecraft:diamond_pickaxe"]`) only affect the vanilla grid + JEI recipe hide for that id. They do not rewrite every mod’s machine recipes.
 
@@ -65,7 +65,7 @@ Recipe-id locks (`"recipes": ["minecraft:diamond_pickaxe"]`) only affect the van
 
 ## Fluids and buckets in JEI
 
-When a fluid is JEI-hidden, Chapters also hides the corresponding filled **bucket** item in JEI when it can resolve that mapping. Gameplay bucket place/fill follows the `transfer` flag (see [[Restriction-flags]]), not `jei`.
+When a fluid is JEI-hidden, Chapters also hides the corresponding filled **bucket** item in JEI when it can resolve that mapping. Gameplay bucket place/fill follows the `preventTransfer` flag (see [[Restriction-flags]]), not `hideInJei`.
 
 ---
 

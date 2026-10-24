@@ -1,0 +1,54 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Guard tag for this line
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          case "$TAG" in
+            v1.*) echo "Tag $TAG matches main (1.x)." ;;
+            *)
+              echo "Refusing tag $TAG on the 1.21 line. Use v1.* on main, v2.* on branch 26."
+              exit 1
+              ;;
+          esac
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Build
+        run: chmod +x ./gradlew && ./gradlew build --no-daemon
+
+      - name: Resolve jar path
+        id: jar
+        run: |
+          JAR=$(ls build/libs/chapters-*.jar | grep -v sources | grep -v javadoc | head -1)
+          echo "path=$JAR" >> "$GITHUB_OUTPUT"
+          echo "Using $JAR"
+
+      - name: GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ steps.jar.outputs.path }}
+          generate_release_notes: true
+          body_path: CHANGELOG.md
+
+      - name: Publish to Modrinth and CurseForge
+        env:
+          MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
+          CURSEFORGE_TOKEN: ${{ secrets.CURSEFORGE_TOKEN }}
+        run: ./gradlew publishMods --no-daemon

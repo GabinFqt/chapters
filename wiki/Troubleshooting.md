@@ -1,61 +1,65 @@
 # Troubleshooting
 
-## Locks never apply
+## Nothing is locked
 
-- **Chapters** jar is in **`mods`** (client **and** server if multiplayer). Use **1.x** for Minecraft **1.21**, **2.x** for Minecraft **26**.
-- **KubeJS:** script under `kubejs/server_scripts/`, `ServerEvents.loaded` ran, no script errors in the log. See [[KubeJS]].
-- **Datapack (optional):** pack enabled, **`/reload`** ok, JSON under **`data/<namespace>/chapters/stages/*.json`**.
-- You expect a behaviour that you turned **off** with a restriction flag (`preventPickup: false`, `preventTransfer: false`, …). Defaults are all on; any explicit `false` disables that behaviour. See [[Restriction-flags]].
+- The Chapters jar is in `mods` on the server. For multiplayer JEI, the client needs it too. **1.x** for Minecraft 1.21, **2.x** for Minecraft 26.
+- KubeJS: the script is in `kubejs/server_scripts/`, `ServerEvents.loaded` ran, and the log shows no script error. See [[KubeJS]].
+- `/reload` and `/chapters reload` do not rerun `ServerEvents.loaded`. `/chapters reload` only re-reads datapack JSON. Use `/kubejs reload server-scripts` or a restart, then `/chapters check <player> <stage>`.
+- Datapack: the pack is enabled, `/reload` succeeded, and the file is `data/<namespace>/chapters/stages/<name>.json`. The stage id is `<namespace>:<name>`.
+- The behaviour you expected is a flag you set to `false`. Defaults are all on. See [[Restriction-flags]].
 
-## Worked once, stopped after edits
+## It worked, then an edit did nothing
 
-**KubeJS** usually needs whatever restart / reload flow you normally use. **`ServerEvents.loaded`** does **not** rerun on every vanilla **`/reload`**.
+KubeJS does not re-run `ServerEvents.loaded` on `/reload` or `/chapters reload`.
 
-Run **`/chapters reload`** after definition changes, then **`/chapters check`** your test player again.
+Reload the scripts (`/kubejs reload server-scripts` or a restart), then `/chapters check` again. Use `/chapters reload` after a datapack JSON edit.
 
-## “They have the stage” but another stage’s item stays locked
+## They have a stage, and another item is still locked
 
-Unlock is **OR** across every stage that lists that content: owning **one** defining stage should unlock it fully. If it stays locked:
+Owning `mypack:tier_early` opens only what that stage lists. Emerald stays locked if it is listed on `mypack:tier_mid` only.
 
-- Confirm with `/chapters list` that the player really has a stage id that appears in **that** content’s definitions (datapack filename → `namespace:name`, or the id passed to `defineStage`).
-- A KubeJS `defineStage` with the **same id** as a datapack file **replaces** the datapack definition; it does not merge. You may have removed the item from the runtime stage by accident.
+If the item is listed on **several** stages, **any one** of those stages unlocks it. Check `/chapters list <player>` and compare the ids with `defineStage` (or with the datapack file name).
 
-If **two packs** both list the same item under different stage ids, the player needs **one** of those stages, not both. Details: [[Stages-datapack]] / [[Restriction-flags]].
+A KubeJS `defineStage` with the same id as a datapack file **replaces** the JSON. The item may no longer be on the stage.
 
-## Item visible in JEI but still unusable (or the reverse)
+## JEI and the game disagree
 
-- `hideInJei: false` keeps the ingredient visible while other flags can still block pickup / craft / inventory.
-- Owning any defining stage unlocks JEI **and** gameplay together. Chapters will not keep JEI hidden after a gameplay unlock.
-- Client/server jar mismatch or a stale sync: reconnect or `/chapters add` / `remove` once. See [[JEI-and-limitations]].
+- `hideInJei: false` leaves it visible. Pickup, crafting, or the inventory drop can still be on.
+- Gaining a stage that lists the content shows it in JEI and opens the gameplay together.
+- Client and server jars differ, or a sync was missed: reconnect, or `/chapters add` then `remove` once. See [[Limits]].
 
-## `/give` keeps a “locked” item
+## `/give` keeps a locked item
 
-`dropFromInventory: false` disables the auto-drop auditor for that content. Pickup and craft can still be blocked. This is intentional for soft gates. Use `dropFromInventory: true` (default) if `/give` and loot should be purged.
+`dropFromInventory: false` turns the inventory drop off. Pickup and crafting can still be blocked. Set it back to `true` (the default) if `/give` and loot should be removed.
 
-## Fluid / bucket still placeable with a fluid stage
+## A locked fluid can still be placed
 
-Check `preventTransfer`. If you set `"preventTransfer": false`, Chapters will not block bucket place/fill or tank transfers for that fluid (the stage can still be a defining unlock key). Defaults keep `preventTransfer: true`.
+`preventTransfer: false` leaves buckets and tanks alone. The default is `true`.
 
-## Dimension listed but travel works
+A pipe can place or move it even when the flag is `true`. See [[Limits]].
 
-`"preventTravel": false` on that dimension entry disables the travel gate while leaving the dimension in the lock index. Defaults keep travel blocked.
+## A locked dimension can still be entered
 
-## Party unlocks look wrong (FTB Teams)
+`preventTravel: false` on that dimension leaves travel open. The default is `true`.
 
-- Confirm `syncWithFtbTeams` in `config/chapters-common.toml` (default `true`).
-- Join **merges** personal + party stages onto the party; leave **snapshots** the party onto the new personal team. See [[FTB-integration]].
-- `/chapters reload` does **not** wipe team-stored stages.
+If the player is already inside and also locked out of the Overworld, Chapters does not move them. See [[Limits]].
 
-## Mekanism chemicals unaffected
+## Party stages look wrong
 
-- Mod missing → harmless JSON, zero chemicals indexed.
-- On **Minecraft 26** (Chapters **2.x**), chemical compat is compiled out until Mekanism has a 26.1 release. Item / fluid / recipe locks still work.
-- GUI transfers vs unattended automation can differ. Don’t rely on pipes alone mirroring survival clicking. `preventTransfer: false` also disables Chapters’ chemical transfer gates when compat is on.
+- `syncWithFtbTeams` in `config/chapters-common.toml` defaults to `true`.
+- Joining a party **unions** stages onto the party. Leaving copies the party stages onto the player, then the two sides diverge. See [[FTB-integration]].
+- `/chapters reload` does not wipe team stages.
 
-## Odd JEI
+## Mekanism chemicals do nothing
 
-Reconnect; keep **matching Chapters jars** client/server; flip **`/chapters add/remove`** once to poke a fresh sync after big script edits. Remember `hideInJei: false` is a visibility choice, not a full unlock.
+- Mekanism is not installed: the lines are kept, and nothing is indexed.
+- Minecraft **26** (Chapters **2.x**): chemical gating is not in the jar. Items, fluids, recipes, and dimensions still lock.
+- A tube can move a chemical that the player cannot. `preventTransfer: false` also turns the player gate off.
+
+## JEI is stale
+
+Reconnect. Keep the same Chapters line on client and server. Toggle `/chapters add` and `remove` once after a big edit. `hideInJei: false` is a visibility choice, not a full unlock.
 
 ## Client crash with KubeJS (Better Advanced Tooltips)
 
-On Minecraft **26.1.2**, older KubeJS embeds of Better Advanced Tooltips can break. Prefer a Chapters **2.x** build that Jar-in-Jars a fixed BAT, or a standalone BAT / newer KubeJS. (Does not apply to the 1.21 line.)
+On Minecraft **26.1.2**, an older KubeJS copy of Better Advanced Tooltips can crash the client. Use a Chapters **2.x** build that bundles a fixed copy, or a standalone fixed build. This does not apply to the 1.21 line.

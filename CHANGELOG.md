@@ -1,4 +1,4 @@
-# Chapters 1.3 (unreleased)
+# Chapters 1.3
 
 ## Changes
 - **Restriction flags**: optional `restrictions` object and per-entry overrides (`hideInJei`, `preventPickup`, `dropFromInventory`, `preventCraft`, `preventTransfer`, `preventTravel`) on datapack / KubeJS stages. Defaults stay fully enforced for legacy JSON.

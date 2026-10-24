@@ -26,12 +26,13 @@ kubejs/data/
 kubejs/.cache/
 kubejs/exported/
 
-# Local-only helper scripts (kept on disk, not tracked).
-scripts/
-
 # Local-only manual test plans / dev notes (kept on disk, not tracked).
 testing/
 kubejs/server_scripts/flags_e2e.js
+
+# Local-only agent / Cursor workflow notes (not for the public repo).
+AGENTS.md
+.cursor/
 
 # Accidentally vendored sources (do not commit)
 net/

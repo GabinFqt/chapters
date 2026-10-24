@@ -14,6 +14,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Guard tag for this line
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          case "$TAG" in
+            v2.*) echo "Tag $TAG matches branch 26 (2.x)." ;;
+            *)
+              echo "Refusing tag $TAG on the Minecraft 26 line. Use v2.* on branch 26, v1.* on main."
+              exit 1
+              ;;
+          esac
+
       - uses: actions/setup-java@v4
         with:
           distribution: temurin

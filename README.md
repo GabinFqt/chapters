@@ -153,7 +153,7 @@ Example KubeJS scripts for local testing live under [`examples/kubejs/`](example
 
 ## Releases
 
-Tag source releases as `v2.0`, `v2.1`, … matching `mod_version` in [`gradle.properties`](gradle.properties). Pushing a `v*` tag runs GitHub Actions (build, GitHub Release, Modrinth + CurseForge via `publishMods`).
+Tag source releases as `v2.0`, `v2.1`, … matching `mod_version` in [`gradle.properties`](gradle.properties). Pushing a `v2.*` tag on this branch runs GitHub Actions (build, GitHub Release, Modrinth + CurseForge via `publishMods`). Use `v1.*` only on `main`.
 
 ### Publishing to Modrinth and CurseForge
 

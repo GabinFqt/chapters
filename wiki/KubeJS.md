@@ -1,134 +1,116 @@
 # KubeJS
 
-**KubeJS is the recommended way to author Chapters stages.** Install **KubeJS** alongside **Chapters**; the script API registers when both mods load. Datapacks still work for packs that cannot ship scripts; see [[Stages-datapack]].
+KubeJS is the way to define stages. Install **KubeJS** next to **Chapters**. The script API shows up when both mods load.
 
-Common config (e.g. FTB Teams sync) lives in `config/chapters-common.toml` ([[FTB-integration]]). Restriction flag semantics: [[Restriction-flags]].
+A datapack works if you cannot ship scripts: [[Stages-datapack]]. A KubeJS `defineStage` with the **same id** as a datapack file **replaces** that file. It does not merge entries. Prefer one source per stage id.
 
-Runtime stages from KubeJS **replace** a datapack stage with the **same id** (they do not merge entry-by-entry). Prefer different ids, or treat KubeJS as the single source for that stage.
+Flag meanings: [[Restriction-flags]]. FTB Teams storage: [[FTB-integration]].
 
 ---
 
-## Quick start
+## Define
 
-1. Put a script under `kubejs/server_scripts/` (see [examples on `main`](https://github.com/GabinFqt/chapters/tree/main/examples/kubejs) / [on `26`](https://github.com/GabinFqt/chapters/tree/26/examples/kubejs)).
-2. Define stages inside `ServerEvents.loaded`.
-3. Grant unlocks with `PlayerStages.of(player).add(...)` from quests, commands wrappers, or other KubeJS events.
-4. After script edits, use your usual KubeJS reload / server restart, then `/chapters reload` if definitions changed while the server was up.
+Put this in `kubejs/server_scripts/`. It runs from `ServerEvents.loaded`.
 
 ```js
 ServerEvents.loaded(() => {
-  ChaptersEvents.defineStage('mypack:tier1', [
+  ChaptersEvents.defineStage('mypack:iron_age', [
     'minecraft:netherite_ingot',
     '#minecraft:swords',
+    '@create',
     'fluid:minecraft:lava',
     'recipe:minecraft:diamond_pickaxe',
-    'dimension:minecraft:the_nether',
-    '@create'
+    'dimension:minecraft:the_nether'
   ])
 })
-
-// Elsewhere (quest reward, custom command, …):
-PlayerStages.of(player).add('mypack:tier1')
 ```
 
----
+Reload with `/kubejs reload server-scripts` or a restart. `/reload` and `/chapters reload` do **not** rerun `ServerEvents.loaded`. `/chapters reload` re-reads datapack JSON and keeps the KubeJS stages already registered.
 
-## `ChaptersEvents.defineStage(stageId, entries[, restrictions])`
+Several `defineStage` calls in the same load are applied together.
+
+### `ChaptersEvents.defineStage(stageId, entries, restrictions)`
 
 | Argument | Meaning |
 | --- | --- |
-| `stageId` | String like `'mypack:tier2'` |
-| `entries` | Array of strings **or** objects `{ id: '…', hideInJei: false, … }` |
-| `restrictions` | Optional stage-wide flag defaults, e.g. `{ hideInJei: false, dropFromInventory: false }` |
+| `stageId` | `'mypack:iron_age'` |
+| `entries` | Strings, or objects `{ id: '…', hideInJei: false }` |
+| `restrictions` | Optional defaults for the whole stage, such as `{ hideInJei: false }` |
 
-### Entry prefixes
+`restrictions` can be omitted. Missing flags stay at their default, which is `true` (fully locked).
+
+### Prefixes
 
 | You write | Meaning |
 | --- | --- |
 | `'minecraft:diamond'` | One item |
 | `'#minecraft:swords'` | Item tag |
-| `'@create'` | Every item from that mod (also gates that mod’s fluids/chemicals unless you only use fluid/chemical prefixes) |
-| `'fluid:minecraft:lava'` | Fluid (tags: `'fluid:#minecraft:water'`, mods: `'fluid:@create'`) |
-| `'chemical:mekanism:hydrogen'` | Mekanism chemical (only indexed when compat is active; off on Minecraft **26** / Chapters **2.x** until Mekanism ships) |
-| `'recipe:minecraft:diamond_pickaxe'` | Recipe registry id (vanilla crafting grid + JEI) |
-| `'dimension:minecraft:the_nether'` | Dimension (`'dimension:#ns:tag'`, `'dimension:@modid'`) |
+| `'@create'` | Every item from that mod, plus its fluids and Mekanism chemicals |
+| `'fluid:minecraft:lava'` | One fluid |
+| `'fluid:#minecraft:water'` | Fluid tag |
+| `'fluid:@create'` | Fluids from that mod only |
+| `'chemical:mekanism:hydrogen'` | One Mekanism chemical. Indexed on **1.21** when Mekanism is installed. On **26**, the line is accepted and locks nothing |
+| `'chemical:#mekanism:gases'` | Chemical tag (same 1.21 rule) |
+| `'chemical:@mekanism'` | Chemicals from that mod only |
+| `'recipe:minecraft:diamond_pickaxe'` | That recipe id. Vanilla grid and JEI. The output item stays free unless you also lock the item |
+| `'dimension:minecraft:the_nether'` | One dimension |
+| `'dimension:#namespace:tag'` | Dimension tag |
+| `'dimension:@modid'` | Every loaded dimension from that namespace |
 
-Object form: `{ id: 'minecraft:emerald', hideInJei: false, dropFromInventory: false }` (alias key `item` also accepted). Starts from stage `restrictions`, then applies only the keys you set.
+An item `'@mod'` line does **not** lock dimensions.
 
-Many `defineStage` calls in the **same server tick** are batched so indexing stays fast after load.
-
-### Restriction flags in scripts
-
-```js
-ServerEvents.loaded(() => {
-  // Soft copper: hold + JEI visible, no craft; raw copper free to pick up
-  ChaptersEvents.defineStage(
-    'mypack:copper_era',
-    [
-      'minecraft:copper_ingot',
-      { id: 'minecraft:raw_copper', preventPickup: false }
-    ],
-    { preventPickup: true, dropFromInventory: false, preventCraft: true, hideInJei: false }
-  )
-
-  // Quest tease: show netherite in JEI, still hard-lock gameplay
-  ChaptersEvents.defineStage(
-    'mypack:tease_netherite',
-    ['minecraft:netherite_ingot'],
-    { hideInJei: false }
-  )
-
-  // Fluid with transfer off (still a defining stage / JEI hide if jei true)
-  ChaptersEvents.defineStage('mypack:water_sight', [
-    { id: 'fluid:minecraft:water', preventTransfer: false, hideInJei: true }
-  ])
-})
-```
-
-Full flag table, multi-stage OR unlock, and pitfalls: [[Restriction-flags]].
-
-### Clearing a runtime stage
+Object form, when one entry needs different flags:
 
 ```js
-ChaptersEvents.clearStage('mypack:tier1')
+{ id: 'minecraft:raw_copper', preventPickup: false }
 ```
+
+`item` is accepted as an alias of `id`. The object starts from the stage `restrictions`, then applies the keys you set.
+
+### Remove a runtime stage
+
+```js
+ChaptersEvents.clearStage('mypack:iron_age')
+```
+
+This drops the KubeJS definition. It does not take the stage away from players who already have it. Use `PlayerStages.of(player).remove(...)` for that.
 
 ---
 
-## `PlayerStages.of(player)`
+## Grant, check, revoke
 
-| Method | Use |
+| Call | Use |
 | --- | --- |
-| `.has(stageId)` | boolean check |
-| `.get()` | all effective stage ids for this player |
-| `.add(stageId)` | grant |
-| `.remove(stageId)` | revoke |
+| `PlayerStages.of(player).has(stageId)` | `true` / `false` |
+| `PlayerStages.of(player).get()` | Stage ids that player effectively has |
+| `PlayerStages.of(player).add(stageId)` | Grant |
+| `PlayerStages.of(player).remove(stageId)` | Revoke |
 
 ```js
-PlayerStages.of(player).add('mypack:tier1')
+PlayerStages.of(player).add('mypack:iron_age')
 
-if (PlayerStages.of(player).has('mypack:tier2')) {
-  // ...
+if (PlayerStages.of(player).has('mypack:tier_mid')) {
+  player.tell('Mid game is open.')
 }
 ```
 
-`player` depends on the KubeJS event you handle.
+`player` is the one from your KubeJS event.
 
-With **FTB Teams** and `syncWithFtbTeams = true`, these methods read/write the **team** store (party shares unlocks). With sync off or no Teams, they use the per-player attachment. Pair with FTB Quests Custom Reward: [[FTB-integration]].
-
----
-
-## Multi-stage unlock
-
-If two `defineStage` calls list the same item, owning **either** stage unlocks it completely. Flags from both apply with OR **only while the player owns neither**. Do not list an id with all flags `false` just to document it; that still becomes an unlock key for other packs. See [[Restriction-flags]].
+With **FTB Teams** and `syncWithFtbTeams` left on (the default), these calls read and write the **team**. The party shares the stage. With the config off, or without Teams, they use the per-player store. See [[FTB-integration]].
 
 ---
 
-## Starter scripts
+## Same item on two stages
 
-Copy into **`kubejs/server_scripts/`**:
+If two `defineStage` calls list the same item, owning **either** stage unlocks it for every behaviour. While the player has neither, a behaviour stays blocked if **any** of those stages enables it.
 
-- Minecraft **26**: [examples/kubejs on `26`](https://github.com/GabinFqt/chapters/tree/26/examples/kubejs)
-- Minecraft **1.21**: [examples/kubejs on `main`](https://github.com/GabinFqt/chapters/tree/main/examples/kubejs)
+Listing an item with every flag set to `false` still counts. Granting that stage unlocks the item for every other pack that locked it. Leave the id out if you only wanted a comment. Full rules: [[Restriction-flags]].
 
-More copy-paste patterns: [[Examples]].
+---
+
+## Samples
+
+- [on `main` (1.21)](https://github.com/GabinFqt/chapters/tree/main/examples/kubejs)
+- [on `26`](https://github.com/GabinFqt/chapters/tree/26/examples/kubejs)
+
+Recipes written out: [[Examples]].

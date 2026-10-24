@@ -1,123 +1,89 @@
-# FTB Library / FTB Teams / FTB Quests
+# FTB Quests and FTB Teams
 
-Chapters auto-detects [FTB Library], [FTB Teams], and [FTB Quests] at runtime. Drop the FTB jars into the same instance as Chapters and the integration boots itself. If any of them is missing, the corresponding feature is silently skipped (Chapters falls back to per-player attachment storage).
+Chapters notices [FTB Library](https://www.curseforge.com/minecraft/mc-mods/ftb-library-forge), [FTB Teams](https://www.curseforge.com/minecraft/mc-mods/ftb-teams-forge), and [FTB Quests](https://www.curseforge.com/minecraft/mc-mods/ftb-quests-forge) when they are installed. Nothing to register. A missing mod just skips that part.
 
-Works on both **Minecraft 1.21** (Chapters **1.x**) and **Minecraft 26** (Chapters **2.x**) when matching FTB builds are installed.
+Works on Minecraft **1.21** (Chapters **1.x**) and **26** (Chapters **2.x**) with a matching FTB build.
 
-[FTB Library]: https://www.curseforge.com/minecraft/mc-mods/ftb-library-forge
-[FTB Teams]: https://www.curseforge.com/minecraft/mc-mods/ftb-teams-forge
-[FTB Quests]: https://www.curseforge.com/minecraft/mc-mods/ftb-quests-forge
+For Stage Reward, Stage Task, and Stage Required you need **FTB Library** and **FTB Quests**. **FTB Teams** is only for shared party unlocks.
 
 ---
 
-## Config: `syncWithFtbTeams`
+## Quests
 
-Team-wide unlocks with FTB Teams are **on by default**. To run Chapters in **standalone** mode while FTB Teams is still installed (per-player attachment only), set in `config/chapters-common.toml`:
+Define the stage first ([[KubeJS]] or [[Stages-datapack]]). The id you type in Quests is that same id, for example `mypack:iron_age`.
+
+| In FTB Quests | What happens | What you type |
+| --- | --- | --- |
+| **Stage Reward** | Completing the quest grants the stage | The stage id |
+| **Stage Task** | The task completes once the player has the stage | The stage id |
+| **Stage Required** on a quest or a quest chapter | That quest or chapter stays closed until the player has the stage | The stage id |
+
+"Quest chapter" here is FTB's folder of quests. It is not a Chapters stage. The value you type into Stage Required is still a stage id like `mypack:iron_age`.
+
+---
+
+## Party sharing
+
+On by default when FTB Teams is installed.
+
+A party shares stages. One member claims a Stage Reward, runs `/chapters add`, or calls `PlayerStages.of(player).add(...)`, and the other online members get it too. JEI and the inventory drop update for them as well.
+
+A solo player keeps stages on their own personal team until they join a party.
+
+| Moment | What Chapters does |
+| --- | --- |
+| Player **joins** a party | The party gains the union of its stages and the stages the player had. Everyone online in the party sees the combined set |
+| Player **leaves** a party | They keep a copy of the party's stages at that moment. Later grants on either side stay separate |
+| First login after you **add** FTB Teams to an old world | Stages that player already had move onto their personal team. They are not dumped into a party |
+
+`/chapters reload` re-reads datapack JSON. It does not clear stages stored on teams, and it does not re-run KubeJS. Use FTB Teams' own commands to wipe team stages.
+
+### Turn party sharing off
+
+`config/chapters-common.toml`:
 
 ```toml
 [ftb]
-	syncWithFtbTeams = true   # default
-	# syncWithFtbTeams = false
+	syncWithFtbTeams = false
 ```
 
-| Setting | FTB Teams installed | Where unlocks are stored |
-| --- | --- | --- |
-| `true` (default) | Yes | Team property `TEAM_STAGES` (shared with party members) |
-| `false` | Yes or no | Per-player Chapters attachment (`PLAYER_STAGES`) |
-| (any) | No | Per-player attachment |
+The default is `true`. Set `false` **before** a world matters to you. Flipping it mid-save leaves existing unlocks on the store you just stopped reading.
 
-**What still works when `syncWithFtbTeams = false`:**
+With `false`, or with FTB Teams absent, each player has their own stages. Stage Reward, Stage Task, and Stage Required still work.
 
-- FTB Library stage provider (Stage Reward / Stage Task / “Stage Required”).
-- `/chapters`, KubeJS `PlayerStages`, datapack definitions, JEI sync.
-- Writes go to the **per-player** store even if Teams is present.
-
-**What changes when `true` + Teams loaded:**
-
-- Reads and writes use the current team’s `TEAM_STAGES`.
-- Party members share unlocks; inventory auditor and JEI refresh run for online members when the team property changes.
-- Mid-session flipping the config without a restart can leave unlocks on the “wrong” store until you migrate manually. Prefer setting it before a serious world.
-
-Restriction **flags** (pickup / JEI / …) are unrelated to this config; they live in stage JSON / KubeJS. See [[Restriction-flags]].
+Restriction flags do not change with this config. See [[Restriction-flags]].
 
 ---
 
-## What you get out of the box
+## Custom Reward
 
-When **FTB Library** is loaded, Chapters registers itself as the active stage provider via FTB Library's `StageHelper`. From that point on:
+Use this when a Stage Reward is not enough: grant only if another stage is already there, pick between two stages, send a message.
 
-| FTB Quests feature | What it does with Chapters | Setup |
-| --- | --- | --- |
-| **Stage Reward** | Grants a chapter id to the claimer on quest completion | Add a *Stage* reward, type the stage id (e.g. `mypack:tier2`) |
-| **Stage Task** | Marks the task complete when the player has the chapter | Add a *Stage* task, type the stage id |
-| **"Stage Required"** field on a quest/chapter | Gates the quest/chapter behind a chapter id | Edit the quest/chapter, set "Stage Required" |
-
-Stage ids are just chapter ids: no special prefix, no namespace mapping. Prefer defining them with KubeJS (`ChaptersEvents.defineStage('mypack:tier2', …)`); datapack JSON under `data/<namespace>/chapters/stages/` uses the same ids.
-
----
-
-## Team-wide unlocks (with FTB Teams + sync on)
-
-When **FTB Teams** is loaded **and** `syncWithFtbTeams` is true, chapter unlocks are **team-scoped** via FTB Teams' built-in `TEAM_STAGES` property.
-
-### Day-to-day behaviour
-
-- Every member of a `PartyTeam` shares unlocks instantly. Claiming a Stage Reward, running `/chapters add`, calling `PlayerStages.of(player).add(...)` from KubeJS: all write to the team store and trigger the inventory auditor + JEI hide/reveal for every online member.
-- A solo player has their own personal team (`PlayerTeam`), so unlocks stay tied to them until they join a party.
-- Everything routes through the same path: commands, KubeJS, FTB Quests Stage Reward, auditor, JEI sync, and the FTB Teams GUI converge on `TEAM_STAGES`.
-
-### Party join (merge)
-
-When a player **joins** a party, Chapters **unions**:
-
-1. Stages already on the party,
-2. Stages on the player’s previous team (usually their personal `PlayerTeam`),
-3. Any leftover stages still on the per-player attachment,
-
-…and writes that set onto the **party**. Everyone online in the party then sees the combined unlocks.
-
-### Party leave (snapshot)
-
-When a player **leaves** a party, Chapters copies the party’s current stage set onto their **new personal team**, then stops syncing with the party. Further unlocks on either side stay separate.
-
-### Legacy migration (first login after adding Teams)
-
-The first time a player logs in after FTB Teams is added to a pre-existing world, Chapters migrates non-empty per-player attachment unlocks into their **personal** `TEAM_STAGES`. **Party teams are skipped** during that migration so personal progress is not dumped into a shared party by accident.
-
-If FTB Teams is **absent**, or `syncWithFtbTeams` is false, the per-player attachment store is used unchanged.
-
----
-
-## Conditional rewards via Custom Reward + KubeJS
-
-FTB Quests' **Custom Reward** is the escape hatch when you want logic on top of a chapter grant (one of several stages, conditional on current state, etc.). Pair it with KubeJS:
+In the quest editor, add a **Custom** reward and copy its id. Put that id in the script.
 
 ```js
 // kubejs/server_scripts/ftbquests_chapter_reward.js
-FTBQuestsEvents.customReward('mypack:grant_tier2', event => {
-  const player = event.player
-  const stage = 'mypack:tier2'
+const CUSTOM_REWARD_ID = '0000000000000000' // paste the copied reward id
 
-  if (PlayerStages.of(player).has(stage)) return
+if (typeof FTBQuestsEvents !== 'undefined') {
+  FTBQuestsEvents.customReward(CUSTOM_REWARD_ID, event => {
+    const stages = PlayerStages.of(event.player)
 
-  PlayerStages.of(player).add(stage)
-  player.tell(Text.green(`Unlocked ${stage}!`))
-})
+    if (!stages.has('mypack:tier_early')) {
+      stages.add('mypack:tier_early')
+      event.player.tell('Early game unlocked.')
+      return
+    }
+
+    stages.add('mypack:tier_mid')
+    event.player.tell('Mid game unlocked.')
+  })
+}
 ```
 
-In the quest editor, add a **Custom** reward and set the id to `mypack:grant_tier2`. The reward routes through Chapters' writer (team or attachment according to `syncWithFtbTeams`), so with team sync on, a party member claiming it shares the unlock with the rest of the party.
+With party sharing on, the grant still reaches the whole party.
 
-Sample script:
+Sample in the repo (same shape, placeholder id):
 
-- [on branch `26`](https://github.com/GabinFqt/chapters/blob/26/examples/kubejs/server_scripts/ftbquests_chapter_reward.js)
 - [on `main`](https://github.com/GabinFqt/chapters/blob/main/examples/kubejs/server_scripts/ftbquests_chapter_reward.js)
-
----
-
-## Notes for pack authors
-
-- Team sync is opt-in by **mod presence** plus the `syncWithFtbTeams` config (default `true`). Authors who don't ship FTB get the original per-player behaviour.
-- FTB Library, FTB Teams, FTB Quests are all declared as `optional` dependencies. None are required to load Chapters.
-- If you only need Stage Reward / Stage Task / "Stage Required", install **FTB Library + FTB Quests**. FTB Teams is only required for team-wide unlock sharing.
-- Chapters' own `/chapters reload` only refreshes stage **definitions**; it does not touch FTB Teams' stored team stages. To wipe team stages use FTB Teams' own commands.
-- Restriction flags and multi-stage OR unlock rules are the same whether storage is personal or team-scoped. See [[Restriction-flags]] and [[Stages-datapack]].
+- [on `26`](https://github.com/GabinFqt/chapters/blob/26/examples/kubejs/server_scripts/ftbquests_chapter_reward.js)

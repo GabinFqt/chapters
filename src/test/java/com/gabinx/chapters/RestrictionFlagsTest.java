@@ -8,7 +8,7 @@ import com.gabinx.chapters.logic.StageBook;
 import com.gabinx.chapters.stage.StageDefinition;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -24,12 +24,12 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class RestrictionFlagsTest {
-    private static final ResourceLocation OAK_PLANKS = id("minecraft:oak_planks");
-    private static final ResourceLocation BIRCH_PLANKS = id("minecraft:birch_planks");
+    private static final Identifier OAK_PLANKS = id("minecraft:oak_planks");
+    private static final Identifier BIRCH_PLANKS = id("minecraft:birch_planks");
 
     @Test
     void stringOnlyJsonKeepsAllFlags() {
-        ResourceLocation stage = id("tutorial:flags_default");
+        Identifier stage = id("tutorial:flags_default");
         JsonObject json = new JsonObject();
         JsonArray items = new JsonArray();
         items.add(DIAMOND.toString());
@@ -41,7 +41,7 @@ class RestrictionFlagsTest {
 
     @Test
     void entryOverrideDisablesJeiButKeepsLock() {
-        ResourceLocation stage = id("tutorial:flags_jei");
+        Identifier stage = id("tutorial:flags_jei");
         JsonObject json = new JsonObject();
         JsonArray items = new JsonArray();
         JsonObject entry = new JsonObject();
@@ -62,7 +62,7 @@ class RestrictionFlagsTest {
 
     @Test
     void dropFromInventoryFalseSkipsSlotsToDrop() {
-        ResourceLocation stage = id("tutorial:flags_inv");
+        Identifier stage = id("tutorial:flags_inv");
         JsonObject json = new JsonObject();
         JsonObject restrictions = new JsonObject();
         restrictions.addProperty("dropFromInventory", false);
@@ -81,8 +81,8 @@ class RestrictionFlagsTest {
 
     @Test
     void multiStageJeiOrKeepsHideWhileLocked() {
-        ResourceLocation stageA = id("tutorial:a_jei");
-        ResourceLocation stageB = id("tutorial:b_nojei");
+        Identifier stageA = id("tutorial:a_jei");
+        Identifier stageB = id("tutorial:b_nojei");
 
         JsonObject withJei = new JsonObject();
         JsonArray itemsA = new JsonArray();
@@ -110,8 +110,8 @@ class RestrictionFlagsTest {
 
     @Test
     void owningHideInJeiFalseStageUnlocksGameplayAndJeiHide() {
-        ResourceLocation stageA = id("tutorial:a_jei");
-        ResourceLocation stageB = id("tutorial:b_nojei");
+        Identifier stageA = id("tutorial:a_jei");
+        Identifier stageB = id("tutorial:b_nojei");
 
         JsonObject withJei = new JsonObject();
         JsonArray itemsA = new JsonArray();
@@ -132,20 +132,20 @@ class RestrictionFlagsTest {
                 stageB, StageDefinition.fromJson(stageB, noJei)
         ));
 
-        Set<ResourceLocation> ownedB = Set.of(stageB);
+        Set<Identifier> ownedB = Set.of(stageB);
         assertFalse(book.isItemLocked(DIAMOND, ownedB));
         assertFalse(book.isItemRestricted(DIAMOND, ownedB, Restriction.JEI));
         assertFalse(book.isItemRestricted(DIAMOND, ownedB, Restriction.PICKUP));
 
-        Set<ResourceLocation> jeiHidden = ClientStageView.computeFlagRestricted(
+        Set<Identifier> jeiHidden = ClientStageView.computeFlagRestricted(
                 book.itemStagesIndexView(), book.itemJeiStagesIndexView(), ownedB);
         assertFalse(jeiHidden.contains(DIAMOND));
     }
 
     @Test
     void multiStageFlagOrWhileLockedUnlocksAllWhenOwningOne() {
-        ResourceLocation stageA = id("tutorial:pickup_only");
-        ResourceLocation stageB = id("tutorial:inventory_only");
+        Identifier stageA = id("tutorial:pickup_only");
+        Identifier stageB = id("tutorial:inventory_only");
 
         JsonObject pickupOnly = stageRestrictions(true, false, false, false, false, false);
         JsonArray itemsA = new JsonArray();
@@ -171,7 +171,7 @@ class RestrictionFlagsTest {
 
     @Test
     void explicitEntryOverridesTagFlagsInSameStage() {
-        ResourceLocation stage = id("tutorial:tag_override");
+        Identifier stage = id("tutorial:tag_override");
         JsonObject json = new JsonObject();
         JsonArray items = new JsonArray();
         items.add("#minecraft:planks");
@@ -191,7 +191,7 @@ class RestrictionFlagsTest {
 
     @Test
     void preventTransferFalseKeepsFluidInLockIndexButNotTransferIndex() {
-        ResourceLocation stage = id("tutorial:no_transfer");
+        Identifier stage = id("tutorial:no_transfer");
         JsonObject json = new JsonObject();
         JsonObject restrictions = new JsonObject();
         restrictions.addProperty("preventTransfer", false);
@@ -210,8 +210,8 @@ class RestrictionFlagsTest {
 
     @Test
     void preventTravelFalseAllowsDimensionTravelWhileStillLocked() {
-        ResourceLocation stage = id("tutorial:no_travel");
-        ResourceLocation nether = id("minecraft:the_nether");
+        Identifier stage = id("tutorial:no_travel");
+        Identifier nether = id("minecraft:the_nether");
         JsonObject json = new JsonObject();
         JsonObject restrictions = new JsonObject();
         restrictions.addProperty("preventTravel", false);
@@ -229,8 +229,8 @@ class RestrictionFlagsTest {
 
     @Test
     void allFlagsFalseStillDefinesUnlockKey() {
-        ResourceLocation soft = id("tutorial:soft");
-        ResourceLocation hard = id("tutorial:hard");
+        Identifier soft = id("tutorial:soft");
+        Identifier hard = id("tutorial:hard");
 
         JsonObject softJson = stageRestrictions(false, false, false, false, false, false);
         JsonArray softItems = new JsonArray();
@@ -266,7 +266,7 @@ class RestrictionFlagsTest {
 
     @Test
     void stageDefaultsApplyToStringEntries() {
-        ResourceLocation stage = id("tutorial:defaults");
+        Identifier stage = id("tutorial:defaults");
         JsonObject json = new JsonObject();
         JsonObject restrictions = new JsonObject();
         restrictions.addProperty("preventPickup", false);

@@ -105,9 +105,9 @@ ServerEvents.loaded(() => {
     'tutorial:granular_emerald',
     [
       'minecraft:copper_ingot',
-      { id: 'minecraft:raw_copper', pickup: false }
+      { id: 'minecraft:raw_copper', preventPickup: false }
     ],
-    { pickup: true, inventory: false, craft: true, jei: false }
+    { preventPickup: true, dropFromInventory: false, preventCraft: true, hideInJei: false }
   )
 })
 ```
@@ -116,8 +116,8 @@ Without the stage:
 
 | Item | Pickup | Keep in inventory | Craft (vanilla grid) | JEI |
 | --- | --- | --- | --- | --- |
-| Copper ingot | Blocked | Kept (`inventory: false`) | Blocked | Visible |
-| Raw copper | Allowed (`pickup: false`) | Kept | Blocked | Visible |
+| Copper ingot | Blocked | Kept (`dropFromInventory: false`) | Blocked | Visible |
+| Raw copper | Allowed (`preventPickup: false`) | Kept | Blocked | Visible |
 
 ### Soft unlock reminder
 

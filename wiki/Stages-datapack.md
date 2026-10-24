@@ -34,36 +34,36 @@ Anything you don’t need can be omitted.
 | `chemical_namespaces` | Extra mod ids that only add chemical locks |
 | `restrictions` | Optional stage-wide defaults for lock behaviours (all `true` if omitted). Full guide: [[Restriction-flags]]. |
 
-List entries may be plain strings (legacy) or objects with an `id` (or `item`) plus per-entry flag overrides, e.g. `{ "id": "minecraft:emerald", "jei": false }`.
+List entries may be plain strings (legacy) or objects with an `id` (or `item`) plus per-entry flag overrides, e.g. `{ "id": "minecraft:emerald", "hideInJei": false }`.
 
 ### Restriction flags (summary)
 
-Defaults are all **`true`** (same as older Chapters builds). Set a flag to `false` on the stage (`restrictions`) or on one entry to disable that behaviour for that content. Flags are **independent**: `inventory: false` does not turn off pickup or craft.
+Defaults are all **`true`** (same as older Chapters builds). Set a flag to `false` on the stage (`restrictions`) or on one entry to disable that behaviour for that content. Flags are **independent**: `dropFromInventory: false` does not turn off `preventPickup` or `preventCraft`.
 
 | Flag | Effect while the content is still locked |
 | --- | --- |
-| `pickup` | Block picking the item up from the world |
-| `inventory` | Auto-drop the item from the player inventory |
-| `craft` | Block crafting the item (or a locked recipe id) on the vanilla crafting grid |
-| `jei` | Hide the ingredient / recipe in JEI |
-| `transfer` | Block fluid / chemical tank transfers (and related bucket place/fill) |
-| `travel` | Block travel into a locked dimension |
+| `preventPickup` | Block picking the item up from the world |
+| `dropFromInventory` | Auto-drop the item from the player inventory |
+| `preventCraft` | Block crafting the item (or a locked recipe id) on the vanilla crafting grid |
+| `hideInJei` | Hide the ingredient / recipe in JEI |
+| `preventTransfer` | Block fluid / chemical tank transfers (and related bucket place/fill) |
+| `preventTravel` | Block travel into a locked dimension |
 
-Only some flags matter for each list type (e.g. `travel` only affects `dimensions`). For the full mental model, overrides vs tags, multi-stage OR, and recipes, see **[[Restriction-flags]]**.
+Only some flags matter for each list type (e.g. `preventTravel` only affects `dimensions`). For the full mental model, overrides vs tags, multi-stage OR, and recipes, see **[[Restriction-flags]]**.
 
 Example: lock diamond fully, but keep emerald visible in JEI and allow carrying it:
 
 ```json
 {
   "restrictions": {
-    "pickup": true,
-    "inventory": true,
-    "craft": true,
-    "jei": true
+    "preventPickup": true,
+    "dropFromInventory": true,
+    "preventCraft": true,
+    "hideInJei": true
   },
   "items": [
     "minecraft:diamond",
-    { "id": "minecraft:emerald", "jei": false, "inventory": false }
+    { "id": "minecraft:emerald", "hideInJei": false, "dropFromInventory": false }
   ]
 }
 ```

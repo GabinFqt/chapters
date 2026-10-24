@@ -5,7 +5,7 @@
 - **Chapters** jar is in **`mods`** (client **and** server if multiplayer). Use **1.x** for Minecraft **1.21**, **2.x** for Minecraft **26**.
 - **KubeJS:** script under `kubejs/server_scripts/`, `ServerEvents.loaded` ran, no script errors in the log. See [[KubeJS]].
 - **Datapack (optional):** pack enabled, **`/reload`** ok, JSON under **`data/<namespace>/chapters/stages/*.json`**.
-- You expect a behaviour that you turned **off** with a restriction flag (`pickup: false`, `transfer: false`, …). Defaults are all on; any explicit `false` disables that behaviour. See [[Restriction-flags]].
+- You expect a behaviour that you turned **off** with a restriction flag (`preventPickup: false`, `preventTransfer: false`, …). Defaults are all on; any explicit `false` disables that behaviour. See [[Restriction-flags]].
 
 ## Worked once, stopped after edits
 
@@ -24,21 +24,21 @@ If **two packs** both list the same item under different stage ids, the player n
 
 ## Item visible in JEI but still unusable (or the reverse)
 
-- `jei: false` keeps the ingredient visible while other flags can still block pickup / craft / inventory.
+- `hideInJei: false` keeps the ingredient visible while other flags can still block pickup / craft / inventory.
 - Owning any defining stage unlocks JEI **and** gameplay together. Chapters will not keep JEI hidden after a gameplay unlock.
 - Client/server jar mismatch or a stale sync: reconnect or `/chapters add` / `remove` once. See [[JEI-and-limitations]].
 
 ## `/give` keeps a “locked” item
 
-`inventory: false` disables the auto-drop auditor for that content. Pickup and craft can still be blocked. This is intentional for soft gates. Use `inventory: true` (default) if `/give` and loot should be purged.
+`dropFromInventory: false` disables the auto-drop auditor for that content. Pickup and craft can still be blocked. This is intentional for soft gates. Use `dropFromInventory: true` (default) if `/give` and loot should be purged.
 
 ## Fluid / bucket still placeable with a fluid stage
 
-Check `transfer`. If you set `"transfer": false`, Chapters will not block bucket place/fill or tank transfers for that fluid (the stage can still be a defining unlock key). Defaults keep `transfer: true`.
+Check `preventTransfer`. If you set `"preventTransfer": false`, Chapters will not block bucket place/fill or tank transfers for that fluid (the stage can still be a defining unlock key). Defaults keep `preventTransfer: true`.
 
 ## Dimension listed but travel works
 
-`"travel": false` on that dimension entry disables the travel gate while leaving the dimension in the lock index. Defaults keep travel blocked.
+`"preventTravel": false` on that dimension entry disables the travel gate while leaving the dimension in the lock index. Defaults keep travel blocked.
 
 ## Party unlocks look wrong (FTB Teams)
 
@@ -50,11 +50,11 @@ Check `transfer`. If you set `"transfer": false`, Chapters will not block bucket
 
 - Mod missing → harmless JSON, zero chemicals indexed.
 - On **Minecraft 26** (Chapters **2.x**), chemical compat is compiled out until Mekanism has a 26.1 release. Item / fluid / recipe locks still work.
-- GUI transfers vs unattended automation can differ. Don’t rely on pipes alone mirroring survival clicking. `transfer: false` also disables Chapters’ chemical transfer gates when compat is on.
+- GUI transfers vs unattended automation can differ. Don’t rely on pipes alone mirroring survival clicking. `preventTransfer: false` also disables Chapters’ chemical transfer gates when compat is on.
 
 ## Odd JEI
 
-Reconnect; keep **matching Chapters jars** client/server; flip **`/chapters add/remove`** once to poke a fresh sync after big script edits. Remember `jei: false` is a visibility choice, not a full unlock.
+Reconnect; keep **matching Chapters jars** client/server; flip **`/chapters add/remove`** once to poke a fresh sync after big script edits. Remember `hideInJei: false` is a visibility choice, not a full unlock.
 
 ## Client crash with KubeJS (Better Advanced Tooltips)
 

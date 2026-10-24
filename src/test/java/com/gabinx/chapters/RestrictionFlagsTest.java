@@ -8,7 +8,7 @@ import com.gabinx.chapters.logic.StageBook;
 import com.gabinx.chapters.stage.StageDefinition;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -24,12 +24,12 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class RestrictionFlagsTest {
-    private static final Identifier OAK_PLANKS = id("minecraft:oak_planks");
-    private static final Identifier BIRCH_PLANKS = id("minecraft:birch_planks");
+    private static final ResourceLocation OAK_PLANKS = id("minecraft:oak_planks");
+    private static final ResourceLocation BIRCH_PLANKS = id("minecraft:birch_planks");
 
     @Test
     void stringOnlyJsonKeepsAllFlags() {
-        Identifier stage = id("tutorial:flags_default");
+        ResourceLocation stage = id("tutorial:flags_default");
         JsonObject json = new JsonObject();
         JsonArray items = new JsonArray();
         items.add(DIAMOND.toString());
@@ -41,12 +41,12 @@ class RestrictionFlagsTest {
 
     @Test
     void entryOverrideDisablesJeiButKeepsLock() {
-        Identifier stage = id("tutorial:flags_jei");
+        ResourceLocation stage = id("tutorial:flags_jei");
         JsonObject json = new JsonObject();
         JsonArray items = new JsonArray();
         JsonObject entry = new JsonObject();
         entry.addProperty("id", EMERALD.toString());
-        entry.addProperty("jei", false);
+        entry.addProperty("hideInJei", false);
         items.add(entry);
         json.add("items", items);
 
@@ -61,11 +61,11 @@ class RestrictionFlagsTest {
     }
 
     @Test
-    void inventoryFalseSkipsSlotsToDrop() {
-        Identifier stage = id("tutorial:flags_inv");
+    void dropFromInventoryFalseSkipsSlotsToDrop() {
+        ResourceLocation stage = id("tutorial:flags_inv");
         JsonObject json = new JsonObject();
         JsonObject restrictions = new JsonObject();
-        restrictions.addProperty("inventory", false);
+        restrictions.addProperty("dropFromInventory", false);
         json.add("restrictions", restrictions);
         JsonArray items = new JsonArray();
         items.add(DIAMOND.toString());
@@ -81,8 +81,8 @@ class RestrictionFlagsTest {
 
     @Test
     void multiStageJeiOrKeepsHideWhileLocked() {
-        Identifier stageA = id("tutorial:a_jei");
-        Identifier stageB = id("tutorial:b_nojei");
+        ResourceLocation stageA = id("tutorial:a_jei");
+        ResourceLocation stageB = id("tutorial:b_nojei");
 
         JsonObject withJei = new JsonObject();
         JsonArray itemsA = new JsonArray();
@@ -91,7 +91,7 @@ class RestrictionFlagsTest {
 
         JsonObject noJei = new JsonObject();
         JsonObject restrictions = new JsonObject();
-        restrictions.addProperty("jei", false);
+        restrictions.addProperty("hideInJei", false);
         noJei.add("restrictions", restrictions);
         JsonArray itemsB = new JsonArray();
         itemsB.add(DIAMOND.toString());
@@ -109,9 +109,9 @@ class RestrictionFlagsTest {
     }
 
     @Test
-    void owningJeiFalseStageUnlocksGameplayAndJeiHide() {
-        Identifier stageA = id("tutorial:a_jei");
-        Identifier stageB = id("tutorial:b_nojei");
+    void owningHideInJeiFalseStageUnlocksGameplayAndJeiHide() {
+        ResourceLocation stageA = id("tutorial:a_jei");
+        ResourceLocation stageB = id("tutorial:b_nojei");
 
         JsonObject withJei = new JsonObject();
         JsonArray itemsA = new JsonArray();
@@ -120,7 +120,7 @@ class RestrictionFlagsTest {
 
         JsonObject noJei = new JsonObject();
         JsonObject restrictions = new JsonObject();
-        restrictions.addProperty("jei", false);
+        restrictions.addProperty("hideInJei", false);
         noJei.add("restrictions", restrictions);
         JsonArray itemsB = new JsonArray();
         itemsB.add(DIAMOND.toString());
@@ -132,20 +132,20 @@ class RestrictionFlagsTest {
                 stageB, StageDefinition.fromJson(stageB, noJei)
         ));
 
-        Set<Identifier> ownedB = Set.of(stageB);
+        Set<ResourceLocation> ownedB = Set.of(stageB);
         assertFalse(book.isItemLocked(DIAMOND, ownedB));
         assertFalse(book.isItemRestricted(DIAMOND, ownedB, Restriction.JEI));
         assertFalse(book.isItemRestricted(DIAMOND, ownedB, Restriction.PICKUP));
 
-        Set<Identifier> jeiHidden = ClientStageView.computeFlagRestricted(
+        Set<ResourceLocation> jeiHidden = ClientStageView.computeFlagRestricted(
                 book.itemStagesIndexView(), book.itemJeiStagesIndexView(), ownedB);
         assertFalse(jeiHidden.contains(DIAMOND));
     }
 
     @Test
     void multiStageFlagOrWhileLockedUnlocksAllWhenOwningOne() {
-        Identifier stageA = id("tutorial:pickup_only");
-        Identifier stageB = id("tutorial:inventory_only");
+        ResourceLocation stageA = id("tutorial:pickup_only");
+        ResourceLocation stageB = id("tutorial:inventory_only");
 
         JsonObject pickupOnly = stageRestrictions(true, false, false, false, false, false);
         JsonArray itemsA = new JsonArray();
@@ -171,13 +171,13 @@ class RestrictionFlagsTest {
 
     @Test
     void explicitEntryOverridesTagFlagsInSameStage() {
-        Identifier stage = id("tutorial:tag_override");
+        ResourceLocation stage = id("tutorial:tag_override");
         JsonObject json = new JsonObject();
         JsonArray items = new JsonArray();
         items.add("#minecraft:planks");
         JsonObject override = new JsonObject();
         override.addProperty("id", OAK_PLANKS.toString());
-        override.addProperty("pickup", false);
+        override.addProperty("preventPickup", false);
         items.add(override);
         json.add("items", items);
 
@@ -190,11 +190,11 @@ class RestrictionFlagsTest {
     }
 
     @Test
-    void transferFalseKeepsFluidInLockIndexButNotTransferIndex() {
-        Identifier stage = id("tutorial:no_transfer");
+    void preventTransferFalseKeepsFluidInLockIndexButNotTransferIndex() {
+        ResourceLocation stage = id("tutorial:no_transfer");
         JsonObject json = new JsonObject();
         JsonObject restrictions = new JsonObject();
-        restrictions.addProperty("transfer", false);
+        restrictions.addProperty("preventTransfer", false);
         json.add("restrictions", restrictions);
         JsonArray fluids = new JsonArray();
         fluids.add(WATER.toString());
@@ -209,12 +209,12 @@ class RestrictionFlagsTest {
     }
 
     @Test
-    void travelFalseAllowsDimensionTravelWhileStillLocked() {
-        Identifier stage = id("tutorial:no_travel");
-        Identifier nether = id("minecraft:the_nether");
+    void preventTravelFalseAllowsDimensionTravelWhileStillLocked() {
+        ResourceLocation stage = id("tutorial:no_travel");
+        ResourceLocation nether = id("minecraft:the_nether");
         JsonObject json = new JsonObject();
         JsonObject restrictions = new JsonObject();
-        restrictions.addProperty("travel", false);
+        restrictions.addProperty("preventTravel", false);
         json.add("restrictions", restrictions);
         JsonArray dimensions = new JsonArray();
         dimensions.add(nether.toString());
@@ -229,8 +229,8 @@ class RestrictionFlagsTest {
 
     @Test
     void allFlagsFalseStillDefinesUnlockKey() {
-        Identifier soft = id("tutorial:soft");
-        Identifier hard = id("tutorial:hard");
+        ResourceLocation soft = id("tutorial:soft");
+        ResourceLocation hard = id("tutorial:hard");
 
         JsonObject softJson = stageRestrictions(false, false, false, false, false, false);
         JsonArray softItems = new JsonArray();
@@ -266,11 +266,11 @@ class RestrictionFlagsTest {
 
     @Test
     void stageDefaultsApplyToStringEntries() {
-        Identifier stage = id("tutorial:defaults");
+        ResourceLocation stage = id("tutorial:defaults");
         JsonObject json = new JsonObject();
         JsonObject restrictions = new JsonObject();
-        restrictions.addProperty("pickup", false);
-        restrictions.addProperty("craft", false);
+        restrictions.addProperty("preventPickup", false);
+        restrictions.addProperty("preventCraft", false);
         json.add("restrictions", restrictions);
         JsonArray items = new JsonArray();
         items.add(DIAMOND.toString());
@@ -278,28 +278,30 @@ class RestrictionFlagsTest {
 
         StageDefinition def = StageDefinition.fromJson(stage, json);
         RestrictionFlags flags = def.items().get(DIAMOND);
-        assertFalse(flags.pickup());
-        assertFalse(flags.craft());
-        assertTrue(flags.inventory());
-        assertTrue(flags.jei());
+        assertFalse(flags.preventPickup());
+        assertFalse(flags.preventCraft());
+        assertTrue(flags.dropFromInventory());
+        assertTrue(flags.hideInJei());
     }
 
+
+
     private static JsonObject stageRestrictions(
-            boolean pickup,
-            boolean inventory,
-            boolean craft,
-            boolean jei,
-            boolean transfer,
-            boolean travel
+            boolean preventPickup,
+            boolean dropFromInventory,
+            boolean preventCraft,
+            boolean hideInJei,
+            boolean preventTransfer,
+            boolean preventTravel
     ) {
         JsonObject json = new JsonObject();
         JsonObject restrictions = new JsonObject();
-        restrictions.addProperty("pickup", pickup);
-        restrictions.addProperty("inventory", inventory);
-        restrictions.addProperty("craft", craft);
-        restrictions.addProperty("jei", jei);
-        restrictions.addProperty("transfer", transfer);
-        restrictions.addProperty("travel", travel);
+        restrictions.addProperty("preventPickup", preventPickup);
+        restrictions.addProperty("dropFromInventory", dropFromInventory);
+        restrictions.addProperty("preventCraft", preventCraft);
+        restrictions.addProperty("hideInJei", hideInJei);
+        restrictions.addProperty("preventTransfer", preventTransfer);
+        restrictions.addProperty("preventTravel", preventTravel);
         json.add("restrictions", restrictions);
         return json;
     }

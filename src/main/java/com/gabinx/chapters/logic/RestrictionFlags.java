@@ -5,27 +5,31 @@ import com.google.gson.JsonObject;
 
 /**
  * Per-entry / per-stage toggles for lock behaviours. Every flag defaults to {@code true}
- * so legacy datapacks keep the previous full-enforcement behaviour.
+ * so stages without an explicit {@code restrictions} object keep full enforcement.
+ * <p>
+ * JSON / KubeJS keys describe what is <em>activated</em> while the content stays locked:
+ * {@code preventPickup}, {@code dropFromInventory}, {@code preventCraft}, {@code hideInJei},
+ * {@code preventTransfer}, {@code preventTravel}.
  */
 public record RestrictionFlags(
-        boolean pickup,
-        boolean inventory,
-        boolean craft,
-        boolean jei,
-        boolean transfer,
-        boolean travel
+        boolean preventPickup,
+        boolean dropFromInventory,
+        boolean preventCraft,
+        boolean hideInJei,
+        boolean preventTransfer,
+        boolean preventTravel
 ) {
     public static final RestrictionFlags ALL =
             new RestrictionFlags(true, true, true, true, true, true);
 
     public boolean allows(Restriction restriction) {
         return switch (restriction) {
-            case PICKUP -> pickup;
-            case INVENTORY -> inventory;
-            case CRAFT -> craft;
-            case JEI -> jei;
-            case TRANSFER -> transfer;
-            case TRAVEL -> travel;
+            case PICKUP -> preventPickup;
+            case INVENTORY -> dropFromInventory;
+            case CRAFT -> preventCraft;
+            case JEI -> hideInJei;
+            case TRANSFER -> preventTransfer;
+            case TRAVEL -> preventTravel;
         };
     }
 
@@ -35,12 +39,12 @@ public record RestrictionFlags(
             return this;
         }
         return new RestrictionFlags(
-                pickup || other.pickup,
-                inventory || other.inventory,
-                craft || other.craft,
-                jei || other.jei,
-                transfer || other.transfer,
-                travel || other.travel
+                preventPickup || other.preventPickup,
+                dropFromInventory || other.dropFromInventory,
+                preventCraft || other.preventCraft,
+                hideInJei || other.hideInJei,
+                preventTransfer || other.preventTransfer,
+                preventTravel || other.preventTravel
         );
     }
 
@@ -53,12 +57,12 @@ public record RestrictionFlags(
             return this;
         }
         return new RestrictionFlags(
-                boolOr(json, "pickup", pickup),
-                boolOr(json, "inventory", inventory),
-                boolOr(json, "craft", craft),
-                boolOr(json, "jei", jei),
-                boolOr(json, "transfer", transfer),
-                boolOr(json, "travel", travel)
+                boolOr(json, "preventPickup", preventPickup),
+                boolOr(json, "dropFromInventory", dropFromInventory),
+                boolOr(json, "preventCraft", preventCraft),
+                boolOr(json, "hideInJei", hideInJei),
+                boolOr(json, "preventTransfer", preventTransfer),
+                boolOr(json, "preventTravel", preventTravel)
         );
     }
 

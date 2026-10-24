@@ -164,7 +164,7 @@ public record StageDefinition(
     }
 
     /**
-     * Accepts a legacy string or an object {@code {"id":"…", "jei":false, …}}.
+     * Accepts a legacy string or an object {@code {"id":"…", "hideInJei":false, …}}.
      */
     static ParsedEntry parseListEntry(JsonElement element, RestrictionFlags stageDefaults) {
         if (element == null || element.isJsonNull()) {

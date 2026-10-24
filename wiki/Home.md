@@ -1,4 +1,4 @@
-**Chapters** is a progression mod for NeoForge. You gate **items, fluids, Mekanism chemicals**, **recipes by id**, and **dimensions** behind named *chapters* (stages). **KubeJS** is the preferred authoring path; datapacks remain supported. Optional **JEI** filters what players see. Per-stage **restriction flags** (`pickup`, `inventory`, `craft`, `jei`, `transfer`, `travel`) let you soft-gate content.
+**Chapters** is a progression mod for NeoForge. You gate **items, fluids, Mekanism chemicals**, **recipes by id**, and **dimensions** behind named *chapters* (stages). **KubeJS** is the preferred authoring path; datapacks remain supported. Optional **JEI** filters what players see. Per-stage **restriction flags** (`preventPickup`, `dropFromInventory`, `preventCraft`, `hideInJei`, `preventTransfer`, `preventTravel`) let you soft-gate content.
 
 | Minecraft | Chapters jar | Java |
 | --- | --- | --- |
@@ -32,7 +32,7 @@ All require permission level as usual for multiplayer.
 | Page | Purpose |
 | --- | --- |
 | [[KubeJS]] | **Start here** — `defineStage`, prefixes, `PlayerStages`, flags in scripts |
-| [[Restriction-flags]] | `pickup` / `inventory` / `craft` / `jei` / `transfer` / `travel`, overrides, recipes |
+| [[Restriction-flags]] | `preventPickup` / `dropFromInventory` / `preventCraft` / `hideInJei` / `preventTransfer` / `preventTravel`, overrides, recipes |
 | [[Examples]] | Copy-paste KubeJS setups (tiers, fluids, recipes, granular flags) |
 | [[FTB-integration]] | FTB Library / Teams / Quests, `syncWithFtbTeams`, party merge |
 | [[JEI-and-limitations]] | JEI hide vs gameplay flags, crafting limits |

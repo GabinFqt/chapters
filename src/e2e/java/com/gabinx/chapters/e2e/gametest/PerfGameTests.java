@@ -40,7 +40,7 @@ public class PerfGameTests {
     private static final ResourceLocation BULK = ResourceLocation.fromNamespaceAndPath("chapters", "e2e_perf_bulk");
     private static final ResourceLocation PROBE = ResourceLocation.fromNamespaceAndPath("chapters_e2e", "perf_0");
 
-    @GameTest(template = "empty", batch = "chaptersperf", timeoutTicks = 6000)
+    @GameTest(templateNamespace = "chapters", template = "empty", batch = "chaptersperf", timeoutTicks = 6000)
     public static void measure(GameTestHelper helper) {
         ChaptersConfig.SYNC_WITH_FTB_TEAMS.set(false);
         helper.assertTrue(StageManager.get().get(BULK).isPresent(), "perf pack stage was not loaded");

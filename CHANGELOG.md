@@ -1,3 +1,11 @@
+# Chapters 1.4
+
+## Changes
+- **JEI after respawn**: unlocked items and recipes stay visible after death, including when leaving the End. Stage sync now runs once the new player exists, instead of racing the death copy and sending an empty stage set (which re-hid everything and stalled the client).
+- **JEI runtime updates**: hides and reveals in the same tick are applied once. Items, fluids, and chemicals are added or removed in a single JEI call per type, and unlocking a large stage reveals its recipes in one pass. `/reload` and rejoining log one line per type instead of one line per item.
+
+---
+
 # Chapters 1.3
 
 ## Changes

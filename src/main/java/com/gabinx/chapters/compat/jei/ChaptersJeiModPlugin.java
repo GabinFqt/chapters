@@ -353,8 +353,8 @@ public final class ChaptersJeiModPlugin implements IModPlugin {
                 if (outputs.isEmpty()) {
                     continue;
                 }
-                for (Identifier itemId : itemsToLock) {
-                    if (outputs.contains(itemId)) {
+                for (Identifier itemId : outputs) {
+                    if (itemsToLock.contains(itemId)) {
                         contributedByItem.get(itemId).add(hr);
                         int refs = recipeHideRefCount.merge(hr, 1, Integer::sum);
                         if (refs == 1) {

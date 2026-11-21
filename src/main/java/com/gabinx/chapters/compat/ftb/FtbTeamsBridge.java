@@ -1,5 +1,6 @@
 package com.gabinx.chapters.compat.ftb;
 
+import com.gabinx.chapters.logic.ParsedStageCache;
 import dev.ftb.mods.ftbteams.api.FTBTeamsAPI;
 import dev.ftb.mods.ftbteams.api.Team;
 import dev.ftb.mods.ftbteams.api.event.TeamPropertiesChangedEvent;
@@ -14,6 +15,7 @@ import org.jetbrains.annotations.Nullable;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.Set;
+import java.util.UUID;
 
 /**
  * Direct FTB Teams interactions. This class only loads when {@code ftbteams}
@@ -28,6 +30,8 @@ import java.util.Set;
  * {@code HashSet} before mutating, and by detecting reads that hit the shared default via identity comparison.
  */
 final class FtbTeamsBridge {
+    private static final ParsedStageCache<UUID> PARSED_STAGES = new ParsedStageCache<>();
+
     private FtbTeamsBridge() {
     }
 
@@ -50,11 +54,20 @@ final class FtbTeamsBridge {
      */
     @Nullable
     static Set<Identifier> viewStages(ServerPlayer player) {
+        Set<Identifier> parsed = cachedStages(player);
+        return parsed == null ? null : new LinkedHashSet<>(parsed);
+    }
+
+    /**
+     * Same as {@link #viewStages} but unmodifiable and shared between calls, for per-event lock checks.
+     */
+    @Nullable
+    static Set<Identifier> cachedStages(ServerPlayer player) {
         Team team = teamOf(player);
         if (team == null) {
             return null;
         }
-        return toIdentifiers(safeReadStages(team));
+        return PARSED_STAGES.get(team.getId(), safeReadStages(team));
     }
 
     /**
@@ -140,16 +153,5 @@ final class FtbTeamsBridge {
                 new TeamPropertiesChangedEvent.Data(team, old, false)
         ));
         team.syncOnePropertyToTeam(TeamProperties.TEAM_STAGES, next);
-    }
-
-    private static Set<Identifier> toIdentifiers(Iterable<String> raw) {
-        Set<Identifier> out = new LinkedHashSet<>();
-        for (String s : raw) {
-            Identifier rl = Identifier.tryParse(s);
-            if (rl != null) {
-                out.add(rl);
-            }
-        }
-        return out;
     }
 }

@@ -24,7 +24,8 @@ public final class LockResolver {
         if (stack.isEmpty()) {
             return false;
         }
-        if (StageManager.get().isItemLocked(EffectiveStages.snapshot(player), stack)) {
+        Identifier itemId = BuiltInRegistries.ITEM.getKey(stack.getItem());
+        if (StageManager.get().book().isItemLocked(itemId, EffectiveStages.view(player))) {
             return true;
         }
         return isFluidBucketLocked(player, stack);
@@ -35,7 +36,7 @@ public final class LockResolver {
             return false;
         }
         Identifier itemId = BuiltInRegistries.ITEM.getKey(stack.getItem());
-        Set<Identifier> owned = EffectiveStages.of(player);
+        Set<Identifier> owned = EffectiveStages.view(player);
         if (StageManager.get().book().isItemRestricted(itemId, owned, restriction)) {
             return true;
         }
@@ -46,7 +47,8 @@ public final class LockResolver {
         if (stack == null || stack.isEmpty()) {
             return false;
         }
-        return StageManager.get().isFluidLocked(EffectiveStages.snapshot(player), stack);
+        Identifier kind = StageDefinition.fluidKindRegistryKey(stack.getFluid());
+        return StageManager.get().book().isFluidLocked(kind, EffectiveStages.view(player));
     }
 
     public static boolean isFluidRestricted(ServerPlayer player, FluidStack stack, Restriction restriction) {
@@ -54,7 +56,7 @@ public final class LockResolver {
             return false;
         }
         Identifier kind = StageDefinition.fluidKindRegistryKey(stack.getFluid());
-        return StageManager.get().book().isFluidRestricted(kind, EffectiveStages.of(player), restriction);
+        return StageManager.get().book().isFluidRestricted(kind, EffectiveStages.view(player), restriction);
     }
 
     /**
@@ -117,7 +119,7 @@ public final class LockResolver {
         if (chemicalRegistryKey == null) {
             return false;
         }
-        return StageManager.get().isChemicalLocked(EffectiveStages.snapshot(player), chemicalRegistryKey);
+        return StageManager.get().book().isChemicalLocked(chemicalRegistryKey, EffectiveStages.view(player));
     }
 
     public static boolean isChemicalRestricted(
@@ -127,14 +129,14 @@ public final class LockResolver {
         }
         return StageManager.get()
                 .book()
-                .isChemicalRestricted(chemicalRegistryKey, EffectiveStages.of(player), restriction);
+                .isChemicalRestricted(chemicalRegistryKey, EffectiveStages.view(player), restriction);
     }
 
     public static boolean isRecipeLocked(ServerPlayer player, Identifier recipeHolderId) {
         if (recipeHolderId == null) {
             return false;
         }
-        return StageManager.get().isRecipeLocked(EffectiveStages.snapshot(player), recipeHolderId);
+        return StageManager.get().book().isRecipeLocked(recipeHolderId, EffectiveStages.view(player));
     }
 
     public static boolean isRecipeRestricted(
@@ -144,14 +146,14 @@ public final class LockResolver {
         }
         return StageManager.get()
                 .book()
-                .isRecipeRestricted(recipeHolderId, EffectiveStages.of(player), restriction);
+                .isRecipeRestricted(recipeHolderId, EffectiveStages.view(player), restriction);
     }
 
     public static boolean isDimensionLocked(ServerPlayer player, Identifier dimensionId) {
         if (dimensionId == null) {
             return false;
         }
-        return StageManager.get().isDimensionLocked(EffectiveStages.snapshot(player), dimensionId);
+        return StageManager.get().book().isDimensionLocked(dimensionId, EffectiveStages.view(player));
     }
 
     public static boolean isDimensionRestricted(
@@ -161,6 +163,6 @@ public final class LockResolver {
         }
         return StageManager.get()
                 .book()
-                .isDimensionRestricted(dimensionId, EffectiveStages.of(player), restriction);
+                .isDimensionRestricted(dimensionId, EffectiveStages.view(player), restriction);
     }
 }

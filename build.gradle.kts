@@ -85,6 +85,15 @@ neoForge {
 
 tasks.test {
     useJUnitPlatform()
+    // Opt-in benchmark: ./gradlew test --tests '*PerfBenchmarkTest' -Pchapters.perf=true -Pchapters.perf.label=before
+    val perf = providers.gradleProperty("chapters.perf").orNull == "true"
+    systemProperty("chapters.perf", perf.toString())
+    if (perf) {
+        maxHeapSize = "2g"
+        outputs.upToDateWhen { false }
+        systemProperty("chapters.perf.label", providers.gradleProperty("chapters.perf.label").getOrElse("run"))
+        systemProperty("chapters.perf.out", layout.buildDirectory.dir("perf").get().asFile.absolutePath)
+    }
 }
 
 sourceSets {

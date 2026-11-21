@@ -3,16 +3,20 @@ package com.gabinx.chapters.event;
 import com.gabinx.chapters.logic.CraftGate;
 import com.gabinx.chapters.logic.Restriction;
 import com.gabinx.chapters.stage.LockResolver;
+import com.gabinx.chapters.stage.StageManager;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.inventory.CraftingContainer;
+import net.minecraft.world.inventory.ResultContainer;
+import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.Container;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.CraftingRecipe;
 import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.item.crafting.RecipeType;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.Optional;
 
@@ -27,8 +31,10 @@ public final class CraftingHandler {
 
         ItemStack crafted = event.getCrafting();
         boolean itemLocked = !crafted.isEmpty() && LockResolver.isRestricted(player, crafted, Restriction.CRAFT);
-        boolean recipeLocked =
-                crafted.isEmpty() ? false : isCraftingRecipeLocked(player, event.getInventory(), crafted);
+        boolean recipeLocked = !crafted.isEmpty()
+                && !itemLocked
+                && !StageManager.get().recipeStagesIndexView().isEmpty()
+                && isCraftingRecipeLocked(player, event.getInventory(), crafted);
 
         if (!CraftGate.shouldBlock(itemLocked, recipeLocked)) {
             return;
@@ -61,10 +67,28 @@ public final class CraftingHandler {
                 player.level().recipeAccess().getRecipeFor(
                         RecipeType.CRAFTING,
                         crafting.asCraftInput(),
-                        player.level()).map(holder -> holder.id().identifier());
+                        player.level(),
+                        lastCraftingRecipe(player)).map(holder -> holder.id().identifier());
         return recipeId
                 .map(id -> LockResolver.isRecipeRestricted(player, id, Restriction.CRAFT))
                 .orElse(false);
+    }
+
+    /**
+     * Recipe vanilla matched for the open menu's result slot, used as a lookup hint (the recipe manager re-checks it
+     * against the grid) so each craft does not scan every crafting recipe again.
+     */
+    @Nullable
+    @SuppressWarnings("unchecked")
+    private static RecipeHolder<CraftingRecipe> lastCraftingRecipe(ServerPlayer player) {
+        for (Slot slot : player.containerMenu.slots) {
+            if (slot.container instanceof ResultContainer result
+                    && result.getRecipeUsed() instanceof RecipeHolder<?> holder
+                    && holder.value() instanceof CraftingRecipe) {
+                return (RecipeHolder<CraftingRecipe>) holder;
+            }
+        }
+        return null;
     }
 
     private static int removeFromCarriedStack(ServerPlayer player, ItemStack target, int amount) {

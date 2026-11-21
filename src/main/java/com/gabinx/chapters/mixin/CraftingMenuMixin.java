@@ -4,7 +4,6 @@ import com.gabinx.chapters.logic.CraftGate;
 import com.gabinx.chapters.logic.Restriction;
 import com.gabinx.chapters.stage.LockResolver;
 
-import net.minecraft.resources.Identifier;
 import net.minecraft.network.protocol.game.ClientboundContainerSetSlotPacket;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -16,10 +15,7 @@ import net.minecraft.world.inventory.ResultContainer;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.CraftingRecipe;
 import net.minecraft.world.item.crafting.RecipeHolder;
-import net.minecraft.world.item.crafting.RecipeType;
 import org.jetbrains.annotations.Nullable;
-
-import java.util.Optional;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -48,14 +44,16 @@ public abstract class CraftingMenuMixin {
         ServerPlayer serverPlayer,
         ItemStack result
     ) {
-        Optional<RecipeHolder<CraftingRecipe>> resolved = level.getServer()
-                .getRecipeManager()
-                .getRecipeFor(RecipeType.CRAFTING, input, level, recipe);
-        Identifier recipeId = resolved.map(holder -> holder.id().identifier()).orElse(null);
-        boolean outputLocked =
-                !result.isEmpty() && LockResolver.isRestricted(serverPlayer, result, Restriction.CRAFT);
-        boolean recipeLocked =
-                recipeId != null && LockResolver.isRecipeRestricted(serverPlayer, recipeId, Restriction.CRAFT);
+        if (result.isEmpty()) {
+            return;
+        }
+
+        boolean outputLocked = LockResolver.isRestricted(serverPlayer, result, Restriction.CRAFT);
+        // A non-empty result means vanilla just stored the matched recipe via setRecipeUsed.
+        RecipeHolder<?> used = resultSlots.getRecipeUsed();
+        boolean recipeLocked = !outputLocked
+                && used != null
+                && LockResolver.isRecipeRestricted(serverPlayer, used.id().identifier(), Restriction.CRAFT);
         if (!CraftGate.shouldBlock(outputLocked, recipeLocked)) {
             return;
         }

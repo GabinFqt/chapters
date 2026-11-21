@@ -41,9 +41,18 @@ public final class EffectiveStages {
         return new LinkedHashSet<>(player.getData(ChaptersRegistries.PLAYER_STAGES.get()).view());
     }
 
-    /** Same as {@link #of(ServerPlayer)} but wrapped as a {@link PlayerStages} for the lock APIs. */
-    public static PlayerStages snapshot(ServerPlayer player) {
-        return new PlayerStages(of(player));
+    /**
+     * Read-only effective stages for lock checks. Unlike {@link #of(ServerPlayer)} it does not copy: the set may be
+     * shared or reflect later changes, so callers must not keep it.
+     */
+    public static Set<Identifier> view(ServerPlayer player) {
+        if (useTeamStages()) {
+            Set<Identifier> teamView = FtbTeamsBridge.cachedStages(player);
+            if (teamView != null) {
+                return teamView;
+            }
+        }
+        return player.getData(ChaptersRegistries.PLAYER_STAGES.get()).view();
     }
 
     /**

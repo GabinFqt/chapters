@@ -3,6 +3,7 @@ package com.gabinx.chapters;
 import com.mojang.logging.LogUtils;
 import com.gabinx.chapters.command.ChaptersCommand;
 import com.gabinx.chapters.compat.RecipeViewerBootstrap;
+import com.gabinx.chapters.compat.RecipeViewerClientHooks;
 import com.gabinx.chapters.compat.ftb.FtbCompat;
 import com.gabinx.chapters.compat.kubejs.ChaptersKubeJSBridge;
 import com.gabinx.chapters.event.CraftingHandler;
@@ -11,10 +12,12 @@ import com.gabinx.chapters.event.InventoryAuditor;
 import com.gabinx.chapters.event.PickupHandler;
 import com.gabinx.chapters.event.PlayerJoinHandler;
 import com.gabinx.chapters.stage.StageManager;
+import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.config.ModConfig;
+import net.neoforged.fml.loading.FMLEnvironment;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.AddReloadListenerEvent;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
@@ -38,6 +41,9 @@ public final class Chapters {
         NeoForge.EVENT_BUS.addListener(ChaptersKubeJSBridge::onServerTickPost);
         NeoForge.EVENT_BUS.addListener(PlayerJoinHandler::onLogin);
         NeoForge.EVENT_BUS.addListener(PlayerJoinHandler::onRespawn);
+        if (FMLEnvironment.dist == Dist.CLIENT) {
+            RecipeViewerClientHooks.register();
+        }
 
         FtbCompat.bootstrap();
 

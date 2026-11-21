@@ -1,5 +1,7 @@
 package com.gabinx.chapters.e2e.client;
 
+import com.gabinx.chapters.compat.jei.ChaptersJeiModPlugin;
+import mezz.jei.api.runtime.IJeiRuntime;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.DeathScreen;
 import net.minecraft.client.gui.screens.GenericMessageScreen;
@@ -10,7 +12,9 @@ import net.minecraft.client.gui.screens.worldselection.WorldCreationUiState;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.game.ServerboundClientCommandPacket;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.level.GameRules;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.levelgen.presets.WorldPresets;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
@@ -21,6 +25,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BooleanSupplier;
 import java.util.function.Predicate;
 import java.util.regex.Matcher;
@@ -45,6 +51,18 @@ public final class E2eClientHarness {
     private static boolean failed;
     private static boolean finished;
     private static String worldFolder = WORLD_NAME;
+    /** JEI runtime seen just before {@code /reload}. The next checks wait for a different instance. */
+    private static IJeiRuntime runtimeBeforeReload;
+    /** Quartz still in the inventory, read on the server thread. {@code -1} until the first read lands. */
+    private static final AtomicInteger serverQuartzCount = new AtomicInteger(-1);
+    /** Quartz item entities near the player, read on the server thread. */
+    private static final AtomicInteger serverQuartzDrops = new AtomicInteger(-1);
+    private static final List<String> PERF = new ArrayList<>();
+    private static long bootStartNs;
+    private static long perfMarkNs;
+    private static long lastFrameNs;
+    private static long maxFrameNs;
+    private static boolean timingFrames;
 
     private E2eClientHarness() {
     }
@@ -57,6 +75,13 @@ public final class E2eClientHarness {
     private static void onTick(ClientTickEvent.Post event) {
         if (finished) {
             return;
+        }
+        if (timingFrames) {
+            long now = System.nanoTime();
+            if (lastFrameNs != 0) {
+                maxFrameNs = Math.max(maxFrameNs, now - lastFrameNs);
+            }
+            lastFrameNs = now;
         }
         try {
             tick();
@@ -95,6 +120,9 @@ public final class E2eClientHarness {
             createSubmitted = true;
             return;
         }
+        if (createSubmitted && minecraft.player != null && bootStartNs == 0) {
+            bootStartNs = System.nanoTime();
+        }
         if (createSubmitted
                 && minecraft.player != null
                 && minecraft.level != null
@@ -102,11 +130,13 @@ public final class E2eClientHarness {
                 && JeiProbes.ready()
                 && !JeiProbes.itemVisible(Items.PRISMARINE_SHARD)) {
             LogTap.mark();
+            perfMarkNs = System.nanoTime();
             inWorld = true;
             buildScript();
             return;
         }
-        if (bootTicks > 3600) {
+        int bootLimit = Boolean.getBoolean("chapters.e2e.perf") ? 10800 : 3600;
+        if (bootTicks > bootLimit) {
             row("0.boot", false, "timed out waiting for a world with JEI locks applied");
             finish();
         }
@@ -159,12 +189,28 @@ public final class E2eClientHarness {
     }
 
     private static void buildScript() {
+        if (Boolean.getBoolean("chapters.e2e.perf")) {
+            buildPerfScript();
+            return;
+        }
         // Visible even while locked (hideInJei false).
         check("1A.1", () -> JeiProbes.itemVisible(Items.AMETHYST_SHARD), "amethyst shard should be visible");
         check("2A.1", () -> JeiProbes.itemVisible(Items.QUARTZ), "quartz should be visible");
-        check("3A.1", () -> !JeiProbes.itemVisible(Items.PRISMARINE_SHARD), "prismarine shard should be hidden");
+        // Real server tick, not the harness settle() that posts PlayerTickEvent by hand.
+        STEPS.add(minecraft -> {
+            serverQuartzCount.set(-1);
+            serverQuartzDrops.set(-1);
+            return true;
+        });
+        command("give @s minecraft:quartz 16");
+        STEPS.add(new Until("2A.2-real", E2eClientHarness::quartzDroppedByServerTick, 80, "the server tick should drop locked quartz"));
+        check("3A.1", () -> !JeiProbes.itemVisible(Items.PRISMARINE_SHARD) && !JeiProbes.itemListed(Items.PRISMARINE_SHARD),
+                "prismarine shard should be hidden");
         check("4A.3", () -> !JeiProbes.itemVisible(Items.BIRCH_PLANKS), "birch planks should be hidden");
         check("4A.4", () -> !JeiProbes.itemVisible(Items.OAK_PLANKS), "oak planks should be hidden");
+        check("4A.5", () -> !JeiProbes.craftingRecipeVisible(id("birch_planks"), Items.BIRCH_PLANKS),
+                "birch planks recipe should be hidden while the output is locked");
+        check("2A.3", JeiProbes::quartzSmeltingVisible, "a hideInJei false item should keep its smelting recipe");
         check("5A.3", () -> !JeiProbes.spyglassRecipeVisible(), "spyglass recipe should be hidden");
         check("6A.1", () -> !JeiProbes.fluidVisible(net.minecraft.world.level.material.Fluids.LAVA)
                 && !JeiProbes.itemVisible(Items.LAVA_BUCKET), "lava and lava bucket should be hidden");
@@ -174,7 +220,8 @@ public final class E2eClientHarness {
         mark();
         command("chapters add @s chapters:e2e_full_prismarine");
         settle();
-        check("3B.1", () -> JeiProbes.itemVisible(Items.PRISMARINE_SHARD), "prismarine should reappear without a restart");
+        check("3B.1", () -> JeiProbes.itemVisible(Items.PRISMARINE_SHARD) && JeiProbes.itemListed(Items.PRISMARINE_SHARD),
+                "prismarine should reappear without a restart");
         command("chapters remove @s chapters:e2e_full_prismarine");
         settle();
         check("3C.1", () -> !JeiProbes.itemVisible(Items.PRISMARINE_SHARD), "prismarine should hide again");
@@ -184,12 +231,16 @@ public final class E2eClientHarness {
         settle();
         check("4B.2", () -> JeiProbes.itemVisible(Items.OAK_PLANKS) && JeiProbes.itemVisible(Items.BIRCH_PLANKS),
                 "oak and birch should both be visible");
+        check("4B.3", () -> JeiProbes.craftingRecipeVisible(id("birch_planks"), Items.BIRCH_PLANKS),
+                "birch planks recipe should be visible once the output is unlocked");
         expect("11D.1", lines -> countAdded(lines, "ItemStack") == 1 && addedCount(lines, "ItemStack") > 1,
                 "one added ItemStack line, count greater than 1");
         mark();
         command("chapters remove @s chapters:e2e_planks");
         settle();
         expect("11D.2", lines -> countRemoved(lines, "ItemStack") == 1, "one removed ItemStack line");
+        check("4C.1", () -> !JeiProbes.craftingRecipeVisible(id("birch_planks"), Items.BIRCH_PLANKS),
+                "birch planks recipe should hide again");
 
         mark();
         command("chapters add @s chapters:e2e_water_transfer");
@@ -214,6 +265,8 @@ public final class E2eClientHarness {
                 && JeiProbes.itemVisible(Items.LAVA_BUCKET), "lava and the bucket should be visible");
         command("chapters remove @s chapters:e2e_lava_no_transfer");
         settle();
+        check("6C.1", () -> !JeiProbes.fluidVisible(net.minecraft.world.level.material.Fluids.LAVA)
+                && !JeiProbes.itemVisible(Items.LAVA_BUCKET), "lava and the bucket should hide again");
 
         mark();
         command("chapters add @s chapters:e2e_recipe_spyglass");
@@ -221,6 +274,25 @@ public final class E2eClientHarness {
         check("5B.2", JeiProbes::spyglassRecipeVisible, "spyglass recipe should be visible");
         command("chapters remove @s chapters:e2e_recipe_spyglass");
         settle();
+        check("5C.1", () -> !JeiProbes.spyglassRecipeVisible(), "spyglass recipe should hide again");
+
+        // Two stages lock the same item. Hiding it must wait until both are gone.
+        check("9.1", () -> !JeiProbes.itemVisible(Items.DIAMOND)
+                && !JeiProbes.craftingRecipeVisible(id("diamond"), Items.DIAMOND),
+                "diamond and its recipe should be hidden with neither stage");
+        command("chapters add @s chapters:e2e_or_a");
+        settle();
+        check("9.2", () -> JeiProbes.itemVisible(Items.DIAMOND)
+                && JeiProbes.craftingRecipeVisible(id("diamond"), Items.DIAMOND),
+                "owning or_a should reveal diamond");
+        command("chapters add @s chapters:e2e_or_b");
+        settle();
+        command("chapters remove @s chapters:e2e_or_a");
+        settle();
+        check("9.3", () -> JeiProbes.itemVisible(Items.DIAMOND), "or_b alone should keep diamond visible");
+        command("chapters remove @s chapters:e2e_or_b");
+        settle();
+        check("9.4", () -> !JeiProbes.itemVisible(Items.DIAMOND), "removing the last stage should hide diamond");
 
         // Respawn with the stages (11A), then without them (11B).
         command("chapters add @s chapters:e2e_full_prismarine");
@@ -228,15 +300,16 @@ public final class E2eClientHarness {
         settle();
         check("11A.1", () -> JeiProbes.itemVisible(Items.PRISMARINE_SHARD) && JeiProbes.itemVisible(Items.BIRCH_PLANKS),
                 "unlocked items should be visible before dying");
-        for (int i = 0; i < 3; i++) {
-            respawn("11A." + (i == 0 ? "2" : "8"));
+        for (String respawnId : new String[] {"11A.2", "11A.8a", "11A.8b"}) {
+            respawn(respawnId);
         }
         check("11A.3", () -> JeiProbes.itemVisible(Items.PRISMARINE_SHARD) && JeiProbes.itemVisible(Items.BIRCH_PLANKS),
                 "unlocked items should stay visible after respawn");
-        check("11A.4", () -> JeiProbes.craftingRecipeVisible(
-                net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("minecraft", "birch_planks"), Items.BIRCH_PLANKS),
+        check("11A.4", () -> JeiProbes.craftingRecipeVisible(id("birch_planks"), Items.BIRCH_PLANKS),
                 "birch planks recipe should be visible");
         command("gamerule keepInventory true");
+        STEPS.add(new Wait(10));
+        check("11A.9-rule", E2eClientHarness::keepInventoryOn, "keepInventory should be on before the kill");
         respawn("11A.9");
         check("11A.9b", () -> JeiProbes.itemVisible(Items.PRISMARINE_SHARD), "keepInventory respawn should keep JEI");
         command("gamerule keepInventory false");
@@ -264,16 +337,17 @@ public final class E2eClientHarness {
         command("execute in minecraft:the_end run tp @s 100.5 80.5 0.5");
         STEPS.add(new Until("11C.1", E2eClientHarness::backInOverworld, 600, "should return to the Overworld"));
         check("11C.2", () -> JeiProbes.itemVisible(Items.PRISMARINE_SHARD), "prismarine should stay visible after leaving the End");
+        STEPS.add(new Wait(40));
         expect("11C.3", E2eClientHarness::noIngredientLines, "leaving the End should not touch JEI ingredients");
         command("chapters remove @s chapters:e2e_end_travel");
         command("chapters remove @s chapters:e2e_full_prismarine");
         settle();
 
         mark();
-        command("reload");
-        STEPS.add(new Until("11E.1", E2eClientHarness::settledInWorld, 3600, "reload should return to the world"));
+        reloadAndWait("11E.1");
         expect("11E.2", E2eClientHarness::reloadLogOk, "at most one removed line per type, no added lines, no count of 1");
         check("11E.3", () -> !JeiProbes.itemVisible(Items.PRISMARINE_SHARD)
+                && !JeiProbes.itemListed(Items.PRISMARINE_SHARD)
                 && !JeiProbes.itemVisible(Items.BIRCH_PLANKS)
                 && !JeiProbes.fluidVisible(net.minecraft.world.level.material.Fluids.WATER),
                 "locked items should stay hidden after reload");
@@ -282,10 +356,9 @@ public final class E2eClientHarness {
         command("chapters add @s chapters:e2e_full_prismarine");
         settle();
         mark();
-        command("reload");
-        STEPS.add(new Until("11E.5a", E2eClientHarness::settledInWorld, 3600, "second reload should return"));
-        STEPS.add(new Until("11E.5", () -> JeiProbes.itemVisible(Items.PRISMARINE_SHARD), 400,
-                "an owned item should stay visible across reload"));
+        reloadAndWait("11E.5a");
+        check("11E.5", () -> JeiProbes.itemVisible(Items.PRISMARINE_SHARD) && JeiProbes.itemListed(Items.PRISMARINE_SHARD),
+                "an owned item should stay visible across reload");
         expect("11E.5b", lines -> countAdded(lines, "ItemStack") == 0, "reload should not add ingredients");
         command("chapters remove @s chapters:e2e_full_prismarine");
         settle();
@@ -296,8 +369,14 @@ public final class E2eClientHarness {
 
         command("chapters add @s chapters:e2e_full_prismarine");
         settle();
-        rejoin("10.3");
+        command("chapters add @s chapters:e2e_planks");
+        settle();
+        rejoin("10.3-rejoin");
         check("10.3", () -> JeiProbes.itemVisible(Items.PRISMARINE_SHARD), "the stage should still be owned after rejoin");
+        check("10.3-recipe", () -> JeiProbes.craftingRecipeVisible(id("birch_planks"), Items.BIRCH_PLANKS),
+                "an owned recipe should stay visible after rejoin");
+        command("chapters remove @s chapters:e2e_planks");
+        settle();
         command("chapters remove @s chapters:e2e_full_prismarine");
         settle();
 
@@ -314,8 +393,7 @@ public final class E2eClientHarness {
         check("11I.4", () -> JeiProbes.itemVisible(Items.WHITE_WOOL)
                 && JeiProbes.itemVisible(Items.RED_BED)
                 && JeiProbes.itemVisible(Items.WHITE_BANNER), "wool, bed, and banner should be visible");
-        check("11I.5", () -> JeiProbes.craftingRecipeVisible(
-                net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("minecraft", "red_bed"), Items.RED_BED),
+        check("11I.5", () -> JeiProbes.craftingRecipeVisible(id("red_bed"), Items.RED_BED),
                 "red bed recipe should be visible");
         mark();
         command("chapters remove @s chapters:e2e_big");
@@ -344,6 +422,117 @@ public final class E2eClientHarness {
         settle();
         check("11I.9", () -> JeiProbes.itemVisible(Items.BIRCH_PLANKS) && !JeiProbes.itemVisible(Items.WHITE_WOOL),
                 "planks stay visible when only the big stage is removed");
+    }
+
+    private static void buildPerfScript() {
+        net.minecraft.world.item.Item bulk = net.minecraft.core.registries.BuiltInRegistries.ITEM.get(id("chapters_e2e", "perf_0"));
+        perf("boot_locks_ms", (System.nanoTime() - bootStartNs) / 1_000_000.0);
+        startFrames();
+        command("chapters add @s chapters:e2e_perf_bulk");
+        STEPS.add(new Until("perf-add", () -> JeiProbes.itemVisible(bulk), 2400, "bulk stage should reveal a perf item"));
+        STEPS.add(minecraft -> {
+            perf("add_visible_ms", (System.nanoTime() - perfMarkNs) / 1_000_000.0);
+            perf("add_refresh_ms", refreshNumber(LogTap.sinceMark()));
+            perf("add_max_frame_ms", maxFrameNs / 1_000_000.0);
+            return true;
+        });
+        startFrames();
+        command("chapters remove @s chapters:e2e_perf_bulk");
+        STEPS.add(new Until("perf-remove", () -> !JeiProbes.itemVisible(bulk), 2400, "bulk stage should hide the perf item"));
+        STEPS.add(minecraft -> {
+            perf("remove_visible_ms", (System.nanoTime() - perfMarkNs) / 1_000_000.0);
+            perf("remove_refresh_ms", refreshNumber(LogTap.sinceMark()));
+            perf("remove_max_frame_ms", maxFrameNs / 1_000_000.0);
+            return true;
+        });
+        startFrames();
+        reloadAndWait("perf-reload");
+        STEPS.add(minecraft -> {
+            perf("reload_ms", (System.nanoTime() - perfMarkNs) / 1_000_000.0);
+            perf("reload_max_frame_ms", maxFrameNs / 1_000_000.0);
+            return true;
+        });
+        startFrames();
+        respawn("perf-respawn");
+        STEPS.add(minecraft -> {
+            perf("respawn_ms", (System.nanoTime() - perfMarkNs) / 1_000_000.0);
+            perf("respawn_max_frame_ms", maxFrameNs / 1_000_000.0);
+            return true;
+        });
+    }
+
+    private static void startFrames() {
+        STEPS.add(minecraft -> {
+            perfMarkNs = System.nanoTime();
+            LogTap.mark();
+            lastFrameNs = 0;
+            maxFrameNs = 0;
+            timingFrames = true;
+            return true;
+        });
+    }
+
+    private static void perf(String name, double value) {
+        PERF.add(name + "\t" + String.format(java.util.Locale.ROOT, "%.3f", value));
+    }
+
+    private static double refreshNumber(List<String> lines) {
+        String ms = refreshMillis(lines);
+        return ms == null ? -1 : Double.parseDouble(ms);
+    }
+
+    private static net.minecraft.resources.ResourceLocation id(String namespace, String path) {
+        return net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(namespace, path);
+    }
+
+    private static net.minecraft.resources.ResourceLocation id(String path) {
+        return net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("minecraft", path);
+    }
+
+    /** Sends {@code /reload} and waits until JEI has built a new runtime, then one more second. */
+    private static void reloadAndWait(String id) {
+        STEPS.add(minecraft -> {
+            runtimeBeforeReload = ChaptersJeiModPlugin.runtimeOrNull();
+            return true;
+        });
+        command("reload");
+        STEPS.add(new Until(id, E2eClientHarness::jeiRestarted, 3600, "reload should rebuild JEI"));
+        STEPS.add(new Wait(20));
+    }
+
+    private static boolean jeiRestarted() {
+        IJeiRuntime runtime = ChaptersJeiModPlugin.runtimeOrNull();
+        return runtime != null && runtime != runtimeBeforeReload && settledInWorld();
+    }
+
+    private static boolean quartzDroppedByServerTick() {
+        Minecraft minecraft = Minecraft.getInstance();
+        var server = minecraft.getSingleplayerServer();
+        if (server == null || minecraft.player == null) {
+            return false;
+        }
+        UUID uuid = minecraft.player.getUUID();
+        server.submit(() -> {
+            ServerPlayer player = server.getPlayerList().getPlayer(uuid);
+            if (player == null) {
+                serverQuartzCount.set(-1);
+                serverQuartzDrops.set(0);
+                return;
+            }
+            serverQuartzCount.set(player.getInventory().countItem(Items.QUARTZ));
+            serverQuartzDrops.set(player.level().getEntitiesOfClass(
+                    net.minecraft.world.entity.item.ItemEntity.class,
+                    player.getBoundingBox().inflate(8),
+                    entity -> entity.getItem().is(Items.QUARTZ)).size());
+        });
+        // Inventory empty before the give is not a pass: a drop entity has to exist.
+        return serverQuartzCount.get() == 0 && serverQuartzDrops.get() > 0;
+    }
+
+    private static boolean keepInventoryOn() {
+        Minecraft minecraft = Minecraft.getInstance();
+        var server = minecraft.getSingleplayerServer();
+        return server != null && server.getGameRules().getBoolean(GameRules.RULE_KEEPINVENTORY);
     }
 
     private static void respawn(String id) {
@@ -559,6 +748,10 @@ public final class E2eClientHarness {
         }
         try {
             Files.writeString(report, text.toString());
+            if (Boolean.getBoolean("chapters.e2e.perf")) {
+                Path perf = minecraft.gameDirectory.toPath().resolve("perf-client.tsv");
+                Files.writeString(perf, String.join("\n", PERF) + "\n");
+            }
         } catch (Exception e) {
             System.err.println("Could not write " + report + ": " + e);
         }

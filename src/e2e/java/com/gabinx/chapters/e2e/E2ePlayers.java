@@ -14,6 +14,7 @@ import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.level.GameType;
 import net.minecraft.server.network.CommonListenerCookie;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.network.registration.ChannelAttributes;
@@ -70,6 +71,11 @@ public final class E2ePlayers {
     }
 
     public static Joined join(GameTestHelper helper) {
+        return join(helper, true);
+    }
+
+    /** {@code creative} is false for crafting tests, where creative click behavior would hide a blocked take. */
+    public static Joined join(GameTestHelper helper, boolean creative) {
         ServerLevel level = helper.getLevel();
         UUID uuid = UUID.randomUUID();
         String name = ("e" + uuid.toString().replace("-", "")).substring(0, 16);
@@ -83,7 +89,7 @@ public final class E2ePlayers {
 
             @Override
             public boolean isCreative() {
-                return true;
+                return creative;
             }
         };
         Connection connection = new Connection(PacketFlow.SERVERBOUND);
@@ -92,6 +98,7 @@ public final class E2ePlayers {
         // "may not be sent to the client" during login.
         acceptModPayloads(connection);
         level.getServer().getPlayerList().placeNewPlayer(connection, player, cookie);
+        player.setGameMode(creative ? GameType.CREATIVE : GameType.SURVIVAL);
         Vec3 feet = helper.absoluteVec(new Vec3(2.5, 1.0, 2.5));
         player.teleportTo(feet.x, feet.y, feet.z);
         return new Joined(player, channel);

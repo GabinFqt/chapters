@@ -9,8 +9,11 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.Container;
 import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.inventory.ClickType;
 import net.minecraft.world.inventory.ContainerLevelAccess;
 import net.minecraft.world.inventory.CraftingMenu;
+import net.minecraft.world.inventory.InventoryMenu;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.Vec3;
@@ -98,6 +101,25 @@ public final class E2eSupport {
             }
         }
         return menu;
+    }
+
+    /** Opens the 3x3 table as the player's menu and fills it, which runs the lock mixin. */
+    public static CraftingMenu openCraftingTable(ServerPlayer player, ItemStack[] grid) {
+        CraftingMenu menu = openGrid(player, grid);
+        player.containerMenu = menu;
+        return menu;
+    }
+
+    /** Puts one item into the 2x2 inventory grid. Slot 1 is the first crafting slot. */
+    public static InventoryMenu fillInventoryGrid(ServerPlayer player, ItemStack stack) {
+        InventoryMenu menu = player.inventoryMenu;
+        player.containerMenu = menu;
+        menu.getSlot(1).set(stack.copy());
+        return menu;
+    }
+
+    public static void takeResult(AbstractContainerMenu menu, ServerPlayer player, ClickType type) {
+        menu.clicked(0, 0, type, player);
     }
 
     public static ItemStack[] grid(ItemStack... stacks) {

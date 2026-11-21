@@ -93,7 +93,8 @@ public class ItemFlagGameTests {
             E2eSupport.give(player, Items.PRISMARINE_SHARD, 4);
             ItemEntity unlocked = E2eSupport.offerPickup(helper, player, Items.PRISMARINE_SHARD);
             helper.assertFalse(unlocked.isAlive(), "unlocked prismarine should be picked up");
-            helper.assertTrue(E2eSupport.count(player, Items.PRISMARINE_SHARD) >= 1, "unlocked give should stay until the next audit");
+            E2eSupport.settle(player);
+            helper.assertTrue(E2eSupport.count(player, Items.PRISMARINE_SHARD) >= 5, "unlocked give and pickup should stay after an audit");
             helper.succeed();
         });
     }

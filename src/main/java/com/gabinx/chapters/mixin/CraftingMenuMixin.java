@@ -21,6 +21,10 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.LocalCapture;
 
+/**
+ * The 3x3 table and the 2x2 inventory grid both call this method
+ * ({@code InventoryMenu.slotsChanged} delegates here).
+ */
 @Mixin(CraftingMenu.class)
 public abstract class CraftingMenuMixin {
     @Inject(

@@ -1,3 +1,10 @@
+# Unreleased
+
+## Changes
+- **Vanilla buckets**: filling or emptying a bucket is now cancelled when that fluid has `preventTransfer` on. Previously only tank and `FluidUtil` transfers were gated, so a normal bucket click could still move a locked fluid until the inventory audit dropped the bucket.
+
+---
+
 # Chapters 1.4
 
 ## Changes

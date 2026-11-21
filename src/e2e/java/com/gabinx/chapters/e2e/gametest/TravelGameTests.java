@@ -54,13 +54,16 @@ public class TravelGameTests {
         helper.assertTrue(joined.drainedStagesContain(E2eStages.FULL_PRISMARINE), "adding a stage should sync it");
         ServerPlayer respawned = joined.player().server.getPlayerList().respawn(joined.player(), false, Entity.RemovalReason.KILLED);
         helper.assertTrue(ChaptersAPI.hasStage(respawned, E2eStages.FULL_PRISMARINE), "the new player should still own the stage");
-        boolean synced = false;
+        boolean sawStages = false;
         for (CustomPacketPayload payload : joined.drainPayloads()) {
-            if (payload instanceof ClientboundStagesPayload stages && stages.stages().contains(E2eStages.FULL_PRISMARINE)) {
-                synced = true;
+            if (payload instanceof ClientboundStagesPayload stages) {
+                sawStages = true;
+                helper.assertTrue(
+                        stages.stages().contains(E2eStages.FULL_PRISMARINE),
+                        "every stage sync after respawn must include the owned stage, not an empty set");
             }
         }
-        helper.assertTrue(synced, "respawn should sync the owned stages, not an empty set");
+        helper.assertTrue(sawStages, "respawn should send a stage sync");
         helper.succeed();
     }
 
@@ -75,23 +78,27 @@ public class TravelGameTests {
             if (!finished.compareAndSet(false, true)) {
                 return;
             }
-            if (error != null) {
-                helper.fail("reload failed: " + error.getMessage());
-                return;
+            try {
+                if (error != null) {
+                    helper.fail("reload failed: " + error.getMessage());
+                    return;
+                }
+                helper.assertTrue(
+                        StageManagerPresent.prismarine(helper),
+                        "prismarine stage should still be loaded after reload");
+                helper.assertTrue(ChaptersAPI.hasStage(player, E2eStages.FULL_PRISMARINE), "the player should keep the stage");
+                E2eSupport.give(player, Items.QUARTZ, 4);
+                E2eSupport.settle(player);
+                helper.assertTrue(E2eSupport.count(player, Items.QUARTZ) == 0, "locks should still drop quartz after reload");
+                E2eSupport.give(player, Items.PRISMARINE_SHARD, 4);
+                E2eSupport.settle(player);
+                helper.assertTrue(
+                        E2eSupport.count(player, Items.PRISMARINE_SHARD) >= 4,
+                        "owned prismarine should stay after reload");
+                helper.succeed();
+            } catch (Throwable thrown) {
+                helper.fail(thrown.toString());
             }
-            helper.assertTrue(
-                    StageManagerPresent.prismarine(helper),
-                    "prismarine stage should still be loaded after reload");
-            helper.assertTrue(ChaptersAPI.hasStage(player, E2eStages.FULL_PRISMARINE), "the player should keep the stage");
-            E2eSupport.give(player, Items.QUARTZ, 4);
-            E2eSupport.settle(player);
-            helper.assertTrue(E2eSupport.count(player, Items.QUARTZ) == 0, "locks should still drop quartz after reload");
-            E2eSupport.give(player, Items.PRISMARINE_SHARD, 4);
-            E2eSupport.settle(player);
-            helper.assertTrue(
-                    E2eSupport.count(player, Items.PRISMARINE_SHARD) >= 4,
-                    "owned prismarine should stay after reload");
-            helper.succeed();
         }, server);
     }
 

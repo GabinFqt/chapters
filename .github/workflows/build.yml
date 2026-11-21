@@ -21,6 +21,9 @@ jobs:
 
   gametest:
     runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      EXPECTED_GAMETESTS: "23"
     steps:
       - uses: actions/checkout@v4
 
@@ -45,13 +48,20 @@ jobs:
             echo "GameTests reported failures"
             exit 1
           fi
-          if ! grep -Eq "All [0-9]+ required tests passed" "$log"; then
+          line=$(grep -E "All [0-9]+ required tests passed" "$log" | tail -n 1 || true)
+          if [ -z "$line" ]; then
             echo "Game test server did not report a passing run"
+            exit 1
+          fi
+          count=$(echo "$line" | grep -Eo "[0-9]+" | head -n 1)
+          if [ "$count" != "$EXPECTED_GAMETESTS" ]; then
+            echo "Expected $EXPECTED_GAMETESTS required tests, got $count"
             exit 1
           fi
 
   client-e2e:
     runs-on: ubuntu-latest
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
 
@@ -66,6 +76,16 @@ jobs:
           sudo apt-get install -y xvfb libxcursor1 libxi6 libgl1 libopenal1 mesa-vulkan-drivers
           chmod +x ./gradlew
           xvfb-run -a --server-args="-screen 0 1280x720x24" ./gradlew runClientE2e --no-daemon
+
+      - name: Require a passing client report
+        if: always()
+        run: |
+          report=run-e2e/e2e-report.md
+          if [ ! -f "$report" ] || ! grep -q "Result: PASS" "$report"; then
+            echo "Client harness did not report PASS"
+            cat "$report" 2>/dev/null || true
+            exit 1
+          fi
 
       - uses: actions/upload-artifact@v4
         if: always()

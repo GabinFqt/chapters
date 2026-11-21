@@ -346,19 +346,15 @@ public final class ChaptersJeiModPlugin implements IModPlugin {
             IRecipeLookup<?> lookup = recipeManager.createRecipeLookup(recipeType);
             List<?> found = lookup.limitFocus(allFoci).get().toList();
             for (Object recipe : found) {
-                HiddenRecipe hr = new HiddenRecipe(recipeType, recipe);
-                Set<ResourceLocation> outputs = extractOutputItemIds(recipe, registryAccess);
-                if (outputs.isEmpty()) {
+                ResourceLocation itemId = outputItemId(recipe, registryAccess);
+                if (itemId == null || !itemsToLock.contains(itemId)) {
                     continue;
                 }
-                for (ResourceLocation itemId : itemsToLock) {
-                    if (outputs.contains(itemId)) {
-                        contributedByItem.get(itemId).add(hr);
-                        int refs = recipeHideRefCount.merge(hr, 1, Integer::sum);
-                        if (refs == 1) {
-                            firstHideByType.computeIfAbsent(recipeType, t -> new ArrayList<>()).add(recipe);
-                        }
-                    }
+                HiddenRecipe hr = new HiddenRecipe(recipeType, recipe);
+                contributedByItem.get(itemId).add(hr);
+                int refs = recipeHideRefCount.merge(hr, 1, Integer::sum);
+                if (refs == 1) {
+                    firstHideByType.computeIfAbsent(recipeType, t -> new ArrayList<>()).add(recipe);
                 }
             }
         }
@@ -378,18 +374,15 @@ public final class ChaptersJeiModPlugin implements IModPlugin {
         return mc.level != null ? mc.level.registryAccess() : null;
     }
 
-    private static Set<ResourceLocation> extractOutputItemIds(Object recipe, HolderLookup.Provider registryAccess) {
-        Set<ResourceLocation> ids = new LinkedHashSet<>();
+    @Nullable
+    private static ResourceLocation outputItemId(Object recipe, HolderLookup.Provider registryAccess) {
         if (recipe instanceof RecipeHolder<?> holder && holder.value() instanceof Recipe<?> value) {
             ItemStack out = value.getResultItem(registryAccess);
             if (!out.isEmpty()) {
-                ResourceLocation key = BuiltInRegistries.ITEM.getKey(out.getItem());
-                if (key != null) {
-                    ids.add(key);
-                }
+                return BuiltInRegistries.ITEM.getKey(out.getItem());
             }
         }
-        return ids;
+        return null;
     }
 
     private static void hideOutputRecipesForItem(IJeiRuntime jei, IRecipeManager recipeManager, ResourceLocation itemId) {

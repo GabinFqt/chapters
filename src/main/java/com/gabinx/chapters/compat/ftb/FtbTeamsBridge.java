@@ -1,5 +1,6 @@
 package com.gabinx.chapters.compat.ftb;
 
+import com.gabinx.chapters.logic.ParsedStageCache;
 import dev.ftb.mods.ftbteams.api.FTBTeamsAPI;
 import dev.ftb.mods.ftbteams.api.Team;
 import dev.ftb.mods.ftbteams.api.event.TeamEvent;
@@ -13,6 +14,7 @@ import org.jetbrains.annotations.Nullable;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.Set;
+import java.util.UUID;
 
 /**
  * Direct FTB Teams interactions. This class only loads when {@code ftbteams}
@@ -27,6 +29,8 @@ import java.util.Set;
  * {@code HashSet} before mutating, and by detecting reads that hit the shared default via identity comparison.
  */
 final class FtbTeamsBridge {
+    private static final ParsedStageCache<UUID> PARSED_STAGES = new ParsedStageCache<>();
+
     private FtbTeamsBridge() {
     }
 
@@ -49,11 +53,20 @@ final class FtbTeamsBridge {
      */
     @Nullable
     static Set<ResourceLocation> viewStages(ServerPlayer player) {
+        Set<ResourceLocation> parsed = cachedStages(player);
+        return parsed == null ? null : new LinkedHashSet<>(parsed);
+    }
+
+    /**
+     * Same as {@link #viewStages} but unmodifiable and shared between calls, for per-event lock checks.
+     */
+    @Nullable
+    static Set<ResourceLocation> cachedStages(ServerPlayer player) {
         Team team = teamOf(player);
         if (team == null) {
             return null;
         }
-        return toResourceLocations(safeReadStages(team));
+        return PARSED_STAGES.get(team.getId(), safeReadStages(team));
     }
 
     /**
@@ -137,16 +150,5 @@ final class FtbTeamsBridge {
         team.setProperty(TeamProperties.TEAM_STAGES, next);
         TeamEvent.PROPERTIES_CHANGED.invoker().accept(new TeamPropertiesChangedEvent(team, old));
         team.syncOnePropertyToTeam(TeamProperties.TEAM_STAGES, next);
-    }
-
-    private static Set<ResourceLocation> toResourceLocations(Iterable<String> raw) {
-        Set<ResourceLocation> out = new LinkedHashSet<>();
-        for (String s : raw) {
-            ResourceLocation rl = ResourceLocation.tryParse(s);
-            if (rl != null) {
-                out.add(rl);
-            }
-        }
-        return out;
     }
 }

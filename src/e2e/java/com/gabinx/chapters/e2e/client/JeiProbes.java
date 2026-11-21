@@ -5,13 +5,14 @@ import mezz.jei.api.constants.RecipeTypes;
 import mezz.jei.api.constants.VanillaTypes;
 import mezz.jei.api.neoforge.NeoForgeTypes;
 import mezz.jei.api.recipe.RecipeIngredientRole;
+import mezz.jei.api.recipe.types.IRecipeType;
 import mezz.jei.api.runtime.IJeiRuntime;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.material.Fluid;
-import net.minecraft.world.level.material.Fluids;
 import net.neoforged.neoforge.fluids.FluidStack;
 
 import java.util.List;
@@ -41,7 +42,31 @@ public final class JeiProbes {
         return runtime.getJeiHelpers().getIngredientVisibility().isIngredientVisible(NeoForgeTypes.FLUID_STACK, new FluidStack(fluid, 1000));
     }
 
+    /** True when the item is in the list the player scrolls, not only marked visible. */
+    public static boolean itemListed(Item item) {
+        IJeiRuntime runtime = ChaptersJeiModPlugin.runtimeOrNull();
+        if (runtime == null) {
+            return false;
+        }
+        Identifier id = BuiltInRegistries.ITEM.getKey(item);
+        return runtime.getIngredientFilter().getFilteredItemStacks().stream()
+                .anyMatch(stack -> id.equals(BuiltInRegistries.ITEM.getKey(stack.getItem())));
+    }
+
     public static boolean craftingRecipeVisible(Identifier recipeId, Item output) {
+        return recipeVisible(RecipeTypes.CRAFTING, recipeId, output);
+    }
+
+    public static boolean spyglassRecipeVisible() {
+        return craftingRecipeVisible(Identifier.fromNamespaceAndPath("minecraft", "spyglass"), Items.SPYGLASS);
+    }
+
+    /** Nether quartz ore still smelts while quartz itself stays listed ({@code hideInJei: false}). */
+    public static boolean quartzSmeltingVisible() {
+        return recipeVisible(RecipeTypes.SMELTING, Identifier.fromNamespaceAndPath("minecraft", "quartz"), Items.QUARTZ);
+    }
+
+    private static boolean recipeVisible(IRecipeType<?> type, Identifier recipeId, Item output) {
         IJeiRuntime runtime = ChaptersJeiModPlugin.runtimeOrNull();
         if (runtime == null) {
             return false;
@@ -49,13 +74,10 @@ public final class JeiProbes {
         var focus = runtime.getJeiHelpers().getFocusFactory()
                 .createFocus(RecipeIngredientRole.OUTPUT, VanillaTypes.ITEM_STACK, new ItemStack(output));
         return runtime.getRecipeManager()
-                .createRecipeLookup(RecipeTypes.CRAFTING)
+                .createRecipeLookup(type)
                 .limitFocus(List.of(focus))
                 .get()
-                .anyMatch(holder -> recipeId.equals(holder.id().identifier()));
-    }
-
-    public static boolean spyglassRecipeVisible() {
-        return craftingRecipeVisible(Identifier.fromNamespaceAndPath("minecraft", "spyglass"), Items.SPYGLASS);
+                .anyMatch(holder -> holder instanceof net.minecraft.world.item.crafting.RecipeHolder<?> recipe
+                        && recipeId.equals(recipe.id().identifier()));
     }
 }

@@ -28,6 +28,14 @@ public final class E2eGameTests {
     public static void registerInstances(RegisterGameTestsEvent event) {
         // The integrated server syncs this registry during login. These instances are not a real
         // codec type, so registering them on the client run hangs world join on "Loading terrain...".
+        // The client perf run sets this flag too. Direct instances are not a synced codec, so only the
+        // headless perf server registers the timing test.
+        if (Boolean.getBoolean("chapters.e2e.perf") && !Boolean.getBoolean("chapters.e2e")) {
+            Holder<TestEnvironmentDefinition<?>> perf = event.registerEnvironment(
+                    Identifier.fromNamespaceAndPath("chapters", "e2e_perf"),
+                    new TestEnvironmentDefinition.AllOf(List.of()));
+            instance(event, perf, "perf_measure", 6000, PerfGameTests::measure);
+        }
         if (!Boolean.getBoolean("chapters.e2e.gametest")) {
             return;
         }
@@ -36,6 +44,9 @@ public final class E2eGameTests {
                 new TestEnvironmentDefinition.AllOf(List.of()));
         Holder<TestEnvironmentDefinition<?>> reload = event.registerEnvironment(
                 Identifier.fromNamespaceAndPath("chapters", "e2e_reload"),
+                new TestEnvironmentDefinition.AllOf(List.of()));
+        Holder<TestEnvironmentDefinition<?>> teams = event.registerEnvironment(
+                Identifier.fromNamespaceAndPath("chapters", "e2e_teams"),
                 new TestEnvironmentDefinition.AllOf(List.of()));
         instance(event, normal, "soft_amethyst_keeps", 120, ItemFlagGameTests::softAmethyst_keepsAndBlocksPickup);
         instance(event, normal, "soft_amethyst_craft", 40, ItemFlagGameTests::softAmethyst_craftOutput);
@@ -46,9 +57,20 @@ public final class E2eGameTests {
         instance(event, normal, "spyglass_recipe", 40, CraftAndFluidGameTests::spyglassRecipe_blockedUntilStage);
         instance(event, normal, "lava_transfer", 80, CraftAndFluidGameTests::lava_transferAllowedAndBucketDrops);
         instance(event, normal, "water_transfer", 80, CraftAndFluidGameTests::water_transferBlockedUntilStage);
+        instance(event, normal, "vanilla_water", 40, CraftAndFluidGameTests::vanillaWater_blockedUntilStage);
+        instance(event, normal, "vanilla_lava", 40, CraftAndFluidGameTests::vanillaLava_placeAndPickupAllowed);
+        instance(event, normal, "craft_pickup", 40, CraftGameTests::lockedResult_pickupClearsCursor);
+        instance(event, normal, "craft_quick_move", 40, CraftGameTests::lockedResult_quickMoveDoesNotEnterInventory);
+        instance(event, normal, "craft_inventory_grid", 40, CraftGameTests::inventoryGrid_hidesLockedPlanks);
+        instance(event, normal, "craft_alt_spyglass", 40, CraftGameTests::altSpyglass_craftsWhileVanillaRecipeLocked);
+        instance(event, normal, "craft_planks_tag", 40, CraftGameTests::planksTag_blocksOakAndBirchOutputs);
         instance(event, normal, "end_travel", 40, TravelGameTests::endTravel_blockedUntilStage);
         instance(event, normal, "respawn_stages", 40, TravelGameTests::respawn_keepsStagesAndSyncsThem);
         instance(event, reload, "reload_stages", 400, TravelGameTests::reload_keepsStagesAndLocks);
+        instance(event, teams, "party_share", 80, TeamGameTests::party_sharesUnlockAndAudit);
+        instance(event, teams, "party_end", 80, TeamGameTests::party_ejectsBothFromEnd);
+        instance(event, teams, "party_leave", 80, TeamGameTests::party_leaveKeepsCopyThenDiverges);
+        instance(event, teams, "party_sync", 80, TeamGameTests::party_syncsFullPayloadNotDelta);
     }
 
     private static void instance(

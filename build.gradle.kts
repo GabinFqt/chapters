@@ -30,6 +30,67 @@ val e2eSourceSet = sourceSets.create("e2e") {
     runtimeClasspath += sourceSets.main.get().output
 }
 
+// Big datapack used only by the perf runs. Kept out of the normal GameTest and client runs.
+val generateE2ePerfPack = tasks.register("generateE2ePerfPack") {
+    val out = layout.buildDirectory.dir("generated/e2e-perf")
+    outputs.dir(out)
+    doLast {
+        val root = out.get().asFile
+        val items = 2000
+        val recipes = 5000
+        val bulk = 1500
+        fun write(path: String, text: String) {
+            val file = root.resolve(path)
+            file.parentFile.mkdirs()
+            file.writeText(text)
+        }
+        val tag = StringBuilder()
+        tag.append("{\n  \"values\": [\n")
+        for (i in 0 until bulk) {
+            tag.append("    \"chapters_e2e:perf_").append(i).append("\"")
+            if (i < bulk - 1) tag.append(",")
+            tag.append("\n")
+        }
+        tag.append("  ]\n}\n")
+        write("data/chapters_e2e/tags/item/perf_bulk.json", tag.toString())
+        write(
+            "data/chapters/chapters/stages/e2e_perf_bulk.json",
+            "{\n  \"items\": [\n    \"#chapters_e2e:perf_bulk\"\n  ]\n}\n"
+        )
+        for (s in 0 until 40) {
+            val body = StringBuilder()
+            body.append("{\n  \"items\": [\n")
+            for (i in 0 until 50) {
+                val id = (s * 50 + i) % items
+                body.append("    \"chapters_e2e:perf_").append(id).append("\"")
+                if (i < 49) body.append(",")
+                body.append("\n")
+            }
+            body.append("  ]\n}\n")
+            write("data/chapters/chapters/stages/e2e_perf_$s.json", body.toString())
+        }
+        for (r in 0 until recipes) {
+            val input = r % items
+            val output = (r + 1) % items
+            write(
+                "data/chapters_e2e/recipe/perf_$r.json",
+                """
+                {
+                  "type": "minecraft:crafting_shapeless",
+                  "ingredients": ["chapters_e2e:perf_$input"],
+                  "result": { "id": "chapters_e2e:perf_$output", "count": 1 }
+                }
+                """.trimIndent() + "\n"
+            )
+        }
+    }
+}
+
+val e2ePerfSourceSet = sourceSets.create("e2eperf") {
+    resources.srcDir(layout.buildDirectory.dir("generated/e2e-perf"))
+}
+tasks.named("processE2eperfResources") { dependsOn(generateE2ePerfPack) }
+
 repositories {
     mavenCentral()
     maven("https://maven.neoforged.net/releases")
@@ -66,6 +127,7 @@ neoForge {
 
     var chaptersMod: net.neoforged.moddevgradle.dsl.ModModel? = null
     var e2eMod: net.neoforged.moddevgradle.dsl.ModModel? = null
+    var e2ePerfMod: net.neoforged.moddevgradle.dsl.ModModel? = null
 
     mods {
         chaptersMod = create(property("mod_id").toString()) {
@@ -74,10 +136,14 @@ neoForge {
         e2eMod = create("chapters_e2e") {
             sourceSet(e2eSourceSet)
         }
+        e2ePerfMod = create("chapters_e2e_perf") {
+            sourceSet(e2ePerfSourceSet)
+        }
     }
 
     val chaptersOnly = setOf(chaptersMod!!)
     val withE2e = setOf(chaptersMod!!, e2eMod!!)
+    val withPerf = setOf(chaptersMod!!, e2eMod!!, e2ePerfMod!!)
 
     unitTest {
         enable()
@@ -119,6 +185,25 @@ neoForge {
             systemProperty("chapters.e2e", "true")
             logLevel.set(org.slf4j.event.Level.DEBUG)
             loadedMods.set(withE2e)
+        }
+        // Headless timings. Do not set chapters.e2e.gametest: that would also run the required suite.
+        create("perfGameTestServer") {
+            server()
+            gameDirectory = file("run-perf")
+            mainClass.set("net.neoforged.fml.startup.GameTestServer")
+            programArguments.addAll("--tests", "chapters:perf_measure")
+            systemProperty("neoforge.enableGameTest", "true")
+            systemProperty("chapters.e2e.perf", "true")
+            loadedMods.set(withPerf)
+        }
+        create("clientPerf") {
+            client()
+            gameDirectory = file("run-client-perf")
+            programArguments.addAll("--username", "Perf")
+            systemProperty("chapters.e2e", "true")
+            systemProperty("chapters.e2e.perf", "true")
+            logLevel.set(org.slf4j.event.Level.DEBUG)
+            loadedMods.set(withPerf)
         }
     }
 }

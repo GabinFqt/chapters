@@ -72,6 +72,11 @@ public final class E2ePlayers {
     }
 
     public static Joined join(GameTestHelper helper) {
+        return join(helper, true);
+    }
+
+    /** {@code creative} is false for crafting tests, where creative click behavior would hide a blocked take. */
+    public static Joined join(GameTestHelper helper, boolean creative) {
         ServerLevel level = helper.getLevel();
         UUID uuid = UUID.randomUUID();
         String name = ("e" + uuid.toString().replace("-", "")).substring(0, 16);
@@ -80,7 +85,7 @@ public final class E2ePlayers {
         ServerPlayer player = new ServerPlayer(level.getServer(), level, cookie.gameProfile(), cookie.clientInformation()) {
             @Override
             public GameType gameMode() {
-                return GameType.CREATIVE;
+                return creative ? GameType.CREATIVE : GameType.SURVIVAL;
             }
         };
         Connection connection = new Connection(PacketFlow.SERVERBOUND);
@@ -92,6 +97,7 @@ public final class E2ePlayers {
         // plain player whose connection never went through the configuration sync task.
         markConfigSynced(connection);
         level.getServer().getPlayerList().placeNewPlayer(connection, player, cookie);
+        player.setGameMode(creative ? GameType.CREATIVE : GameType.SURVIVAL);
         Vec3 feet = helper.absoluteVec(new Vec3(2.5, 1.0, 2.5));
         player.teleportTo(feet.x, feet.y, feet.z);
         return new Joined(player, channel);

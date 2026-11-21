@@ -18,6 +18,8 @@ run/
 run-bob/
 run-e2e/
 run-gametest/
+run-perf/
+run-client-perf/
 
 # Shared KubeJS dev folder (canonical source for run/kubejs and run-bob/kubejs symlinks).
 # We track the scripts you actually edit and ignore everything KubeJS regenerates on boot.

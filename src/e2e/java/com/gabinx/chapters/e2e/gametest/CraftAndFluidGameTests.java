@@ -8,6 +8,8 @@ import net.minecraft.core.Direction;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Blocks;
@@ -99,6 +101,66 @@ public class CraftAndFluidGameTests {
             helper.assertTrue(unlocked.isSuccess(), "unlocked water pickup should succeed");
             helper.succeed();
         });
+    }
+
+    public static void vanillaWater_blockedUntilStage(GameTestHelper helper) {
+        E2eSupport.prepare(helper);
+        ServerPlayer player = E2ePlayers.join(helper).player();
+        BlockPos target = new BlockPos(2, 2, 4);
+        BlockPos placedAt = new BlockPos(2, 2, 3);
+        helper.setBlock(target, Blocks.STONE.defaultBlockState());
+        InteractionResult placeBlocked = useBucket(player, Items.WATER_BUCKET);
+        helper.assertTrue(placeBlocked == InteractionResult.FAIL, "a vanilla water bucket should refuse to place");
+        helper.assertFalse(
+                helper.getLevel().getBlockState(helper.absolutePos(placedAt)).is(Blocks.WATER),
+                "locked water should not be placed");
+        helper.setBlock(target, Blocks.WATER.defaultBlockState());
+        InteractionResult blocked = useBucket(player, Items.BUCKET);
+        helper.assertTrue(blocked == InteractionResult.FAIL, "a vanilla bucket should refuse locked water");
+        helper.assertTrue(helper.getLevel().getBlockState(helper.absolutePos(target)).is(Blocks.WATER), "locked water should stay");
+        E2eSupport.grant(player, E2eStages.WATER_TRANSFER);
+        InteractionResult unlocked = useBucket(player, Items.BUCKET);
+        helper.assertTrue(unlocked.consumesAction(), "an unlocked vanilla bucket should pick up water");
+        helper.assertFalse(
+                helper.getLevel().getBlockState(helper.absolutePos(target)).is(Blocks.WATER),
+                "unlocked pickup should remove the source");
+        helper.setBlock(target, Blocks.STONE.defaultBlockState());
+        InteractionResult placed = useBucket(player, Items.WATER_BUCKET);
+        helper.assertTrue(placed.consumesAction(), "an unlocked water bucket should place");
+        helper.assertTrue(
+                helper.getLevel().getBlockState(helper.absolutePos(placedAt)).is(Blocks.WATER),
+                "unlocked place should leave a source");
+        helper.succeed();
+    }
+
+    public static void vanillaLava_placeAndPickupAllowed(GameTestHelper helper) {
+        E2eSupport.prepare(helper);
+        ServerPlayer player = E2ePlayers.join(helper).player();
+        BlockPos lava = new BlockPos(2, 2, 4);
+        BlockPos placedAt = new BlockPos(2, 2, 3);
+        helper.setBlock(lava, Blocks.LAVA.defaultBlockState());
+        InteractionResult picked = useBucket(player, Items.BUCKET);
+        helper.assertTrue(picked.consumesAction(), "lava pickup stays allowed when preventTransfer is off");
+        helper.assertFalse(
+                helper.getLevel().getBlockState(helper.absolutePos(lava)).is(Blocks.LAVA),
+                "lava pickup should remove the source");
+        helper.setBlock(lava, Blocks.STONE.defaultBlockState());
+        InteractionResult placed = useBucket(player, Items.LAVA_BUCKET);
+        helper.assertTrue(placed.consumesAction(), "lava place stays allowed when preventTransfer is off");
+        helper.assertTrue(
+                helper.getLevel().getBlockState(helper.absolutePos(placedAt)).is(Blocks.LAVA),
+                "lava place should leave a source in front of the clicked block");
+        helper.succeed();
+    }
+
+    /** The joined player stands at relative (2, 1, 2) looking +Z, so a source at (2, 2, 4) is at eye height. */
+    private static InteractionResult useBucket(ServerPlayer player, Item item) {
+        player.setYRot(0.0F);
+        player.setXRot(0.0F);
+        player.setYHeadRot(0.0F);
+        ItemStack stack = new ItemStack(item);
+        player.setItemInHand(InteractionHand.MAIN_HAND, stack);
+        return stack.getItem().use(player.level(), player, InteractionHand.MAIN_HAND);
     }
 
     private static ItemStack[] spyglassGrid() {

@@ -18,7 +18,7 @@ A `recipe:` lock is that one recipe id. It does not rewrite every machine recipe
 
 ## Pipes and automation
 
-A player placing a bucket, filling a tank, or moving a fluid or chemical through a GUI is blocked when `preventTransfer` is on (the default).
+A player placing or filling a vanilla bucket, filling a tank, or moving a fluid or chemical through a GUI is blocked when `preventTransfer` is on (the default).
 
 A pipe, tube, or other insert that runs with no player attached still moves the fluid or chemical. Do not count on pipes to enforce a stage.
 

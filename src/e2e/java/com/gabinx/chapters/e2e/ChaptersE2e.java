@@ -2,11 +2,13 @@ package com.gabinx.chapters.e2e;
 
 import com.mojang.logging.LogUtils;
 import net.minecraft.core.registries.Registries;
+import net.minecraft.world.item.CreativeModeTabs;
 import net.minecraft.world.item.Item;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.loading.FMLEnvironment;
+import net.neoforged.neoforge.event.BuildCreativeModeTabContentsEvent;
 import net.neoforged.neoforge.registries.DeferredRegister;
 import org.slf4j.Logger;
 
@@ -21,6 +23,13 @@ public final class ChaptersE2e {
     private static final Logger LOGGER = LogUtils.getLogger();
     private static final DeferredRegister<Item> PERF_ITEM_REGISTER = DeferredRegister.create(Registries.ITEM, MOD_ID);
 
+    private static void addPerfItemsToIngredients(BuildCreativeModeTabContentsEvent event) {
+        if (event.getTabKey() != CreativeModeTabs.INGREDIENTS) {
+            return;
+        }
+        PERF_ITEM_REGISTER.getEntries().forEach(entry -> event.accept(entry.get()));
+    }
+
     public ChaptersE2e(IEventBus modBus) {
         if (Boolean.getBoolean("chapters.e2e.perf")) {
             for (int i = 0; i < PERF_ITEMS; i++) {
@@ -28,6 +37,8 @@ public final class ChaptersE2e {
                 PERF_ITEM_REGISTER.register("perf_" + index, () -> new Item(new Item.Properties()));
             }
             PERF_ITEM_REGISTER.register(modBus);
+            // JEI lists creative-tab items. Without a tab the bulk stage never changes what the player sees.
+            modBus.addListener(ChaptersE2e::addPerfItemsToIngredients);
         }
         boolean harness = FMLEnvironment.dist == Dist.CLIENT && Boolean.getBoolean("chapters.e2e");
         LOGGER.info("Chapters e2e mod loaded (client harness {})", harness);

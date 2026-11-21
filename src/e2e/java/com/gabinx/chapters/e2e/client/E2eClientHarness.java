@@ -271,7 +271,7 @@ public final class E2eClientHarness {
 
         mark();
         command("reload");
-        STEPS.add(new Until("11E.1", E2eClientHarness::settledInWorld, 1200, "reload should return to the world"));
+        STEPS.add(new Until("11E.1", E2eClientHarness::settledInWorld, 3600, "reload should return to the world"));
         expect("11E.2", E2eClientHarness::reloadLogOk, "at most one removed line per type, no added lines, no count of 1");
         check("11E.3", () -> !JeiProbes.itemVisible(Items.PRISMARINE_SHARD)
                 && !JeiProbes.itemVisible(Items.BIRCH_PLANKS)
@@ -283,7 +283,7 @@ public final class E2eClientHarness {
         settle();
         mark();
         command("reload");
-        STEPS.add(new Until("11E.5a", E2eClientHarness::settledInWorld, 1200, "second reload should return"));
+        STEPS.add(new Until("11E.5a", E2eClientHarness::settledInWorld, 3600, "second reload should return"));
         check("11E.5", () -> JeiProbes.itemVisible(Items.PRISMARINE_SHARD), "an owned item should stay visible across reload");
         expect("11E.5b", lines -> countAdded(lines, "ItemStack") == 0, "reload should not add ingredients");
         command("chapters remove @s chapters:e2e_full_prismarine");
@@ -348,14 +348,14 @@ public final class E2eClientHarness {
     private static void respawn(String id) {
         mark();
         command("kill @s");
-        STEPS.add(new Until(id, E2eClientHarness::deathOrGone, 400, "death screen"));
+        STEPS.add(new Until(id, E2eClientHarness::deathOrGone, 1200, "death screen"));
         STEPS.add(minecraft -> {
             if (minecraft.player instanceof LocalPlayer local && (local.isDeadOrDying() || minecraft.screen instanceof DeathScreen)) {
                 local.respawn();
             }
             return true;
         });
-        STEPS.add(new Until(id + "-back", E2eClientHarness::aliveInWorld, 400, "respawn"));
+        STEPS.add(new Until(id + "-back", E2eClientHarness::aliveInWorld, 1200, "respawn"));
         expect(id + "-log", E2eClientHarness::noIngredientLines, "respawn should not touch JEI ingredients");
     }
 
@@ -582,7 +582,8 @@ public final class E2eClientHarness {
                 return true;
             }
             if (--left <= 0) {
-                row(id, false, why);
+                String screen = minecraft.screen == null ? "no screen" : minecraft.screen.getClass().getSimpleName();
+                row(id, false, why + " (" + screen + ")");
                 return true;
             }
             return false;

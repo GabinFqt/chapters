@@ -18,3 +18,60 @@ jobs:
 
       - name: Gradle build
         run: chmod +x ./gradlew && ./gradlew build --no-daemon
+
+  gametest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+
+      - name: Game tests
+        run: chmod +x ./gradlew && ./gradlew runGameTestServer --no-daemon
+
+      # The game test server can return 0 when startup crashes or tests fail, so check the log.
+      - name: Require a passing GameTest summary
+        if: always()
+        run: |
+          log=run-gametest/logs/latest.log
+          if [ ! -f "$log" ]; then
+            echo "No game test log. The server did not start."
+            exit 1
+          fi
+          if grep -q "required tests failed" "$log"; then
+            echo "GameTests reported failures"
+            exit 1
+          fi
+          if ! grep -Eq "All [0-9]+ required tests passed" "$log"; then
+            echo "Game test server did not report a passing run"
+            exit 1
+          fi
+
+  client-e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+
+      - name: Client harness
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y xvfb libxcursor1 libxi6 libgl1 libopenal1 mesa-vulkan-drivers
+          chmod +x ./gradlew
+          xvfb-run -a --server-args="-screen 0 1280x720x24" ./gradlew runClientE2e --no-daemon
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: client-e2e
+          path: |
+            run-e2e/e2e-report.md
+            run-e2e/logs/
+          if-no-files-found: ignore

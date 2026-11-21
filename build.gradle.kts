@@ -22,6 +22,14 @@ java {
 
 val enableMekanism = findProperty("enable_mekanism")?.toString()?.toBoolean() == true
 
+// Dev-only GameTests and the client harness. Not part of the published jar (jar uses source set main).
+val e2eSourceSet = sourceSets.create("e2e") {
+    compileClasspath += sourceSets.main.get().compileClasspath
+    runtimeClasspath += sourceSets.main.get().runtimeClasspath
+    compileClasspath += sourceSets.main.get().output
+    runtimeClasspath += sourceSets.main.get().output
+}
+
 repositories {
     mavenCentral()
     maven("https://maven.neoforged.net/releases")
@@ -56,29 +64,61 @@ repositories {
 neoForge {
     version = property("neo_version").toString()
 
+    var chaptersMod: net.neoforged.moddevgradle.dsl.ModModel? = null
+    var e2eMod: net.neoforged.moddevgradle.dsl.ModModel? = null
+
     mods {
-        create(property("mod_id").toString()) {
+        chaptersMod = create(property("mod_id").toString()) {
             sourceSet(sourceSets.main.get())
         }
+        e2eMod = create("chapters_e2e") {
+            sourceSet(e2eSourceSet)
+        }
     }
+
+    val chaptersOnly = setOf(chaptersMod!!)
+    val withE2e = setOf(chaptersMod!!, e2eMod!!)
 
     unitTest {
         enable()
         testedMod = mods.getByName(property("mod_id").toString())
+        loadedMods.set(chaptersOnly)
     }
 
     runs {
         create("client") {
             client()
             programArguments.addAll("--username", "Alice")
+            loadedMods.set(chaptersOnly)
         }
         create("clientBob") {
             client()
             programArguments.addAll("--username", "Bob")
             gameDirectory = file("run-bob")
+            loadedMods.set(chaptersOnly)
         }
         create("server") {
             server()
+            loadedMods.set(chaptersOnly)
+        }
+        // net.minecraft.gametest.Main. --tests keeps vanilla instances out of the run.
+        create("gameTestServer") {
+            server()
+            gameDirectory = file("run-gametest")
+            mainClass.set("net.neoforged.fml.startup.GameTestServer")
+            programArguments.addAll("--tests", "chapters:*")
+            systemProperty("neoforge.enableGameTest", "true")
+            // Direct test instances are not a synced registry type. Only the headless run registers them.
+            systemProperty("chapters.e2e.gametest", "true")
+            loadedMods.set(withE2e)
+        }
+        create("clientE2e") {
+            client()
+            gameDirectory = file("run-e2e")
+            programArguments.addAll("--username", "E2E")
+            systemProperty("chapters.e2e", "true")
+            logLevel.set(org.slf4j.event.Level.DEBUG)
+            loadedMods.set(withE2e)
         }
     }
 }

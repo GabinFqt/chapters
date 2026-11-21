@@ -113,6 +113,21 @@ set -a && source .env && set +a && ./gradlew publishMods
 
 Platforms with an empty project id are skipped.
 
+### Testing
+
+`./gradlew test` runs the unit tests. The flags protocol has two more runs:
+
+```bash
+./gradlew runGameTestServer
+./gradlew runClientE2e
+```
+
+`runGameTestServer` is headless. It checks pickup, drops, crafting, fluids, the End, respawn, and `/reload`. Success is the log line `All N required tests passed`. On this line the process can still exit 0 when tests fail, so read that line (CI does).
+
+`runClientE2e` opens a flat creative world and checks JEI, the recipe-viewer log lines, respawn, and rejoin. It writes `run-e2e/e2e-report.md`. It needs a display. GitHub Actions runs it under `xvfb`.
+
+LAN with a second player and a dedicated server stay manual.
+
 ### License
 
 MIT. See [LICENSE](LICENSE).

@@ -1,0 +1,31 @@
+modLoader="javafml"
+loaderVersion="[4,)"
+license="MIT"
+
+[[mods]]
+modId="chapters_e2e"
+version="0"
+displayName="Chapters E2E"
+authors="gabinx"
+description='''Dev-only GameTests and client harness. Not shipped in the Chapters jar.'''
+
+[[dependencies.chapters_e2e]]
+modId="neoforge"
+type="required"
+versionRange="[26.1,)"
+ordering="NONE"
+side="BOTH"
+
+[[dependencies.chapters_e2e]]
+modId="minecraft"
+type="required"
+versionRange="[26.1.2]"
+ordering="NONE"
+side="BOTH"
+
+[[dependencies.chapters_e2e]]
+modId="chapters"
+type="required"
+versionRange="[0,)"
+ordering="AFTER"
+side="BOTH"

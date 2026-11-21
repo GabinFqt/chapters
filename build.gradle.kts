@@ -249,7 +249,7 @@ publishMods {
 
     val changelogFile = rootProject.file("CHANGELOG.md")
     changelog = if (changelogFile.exists()) {
-        changelogFile.readText()
+        changelogFile.readText().substringBefore("\n---\n").trim()
     } else {
         "Release ${property("mod_version")}"
     }

@@ -3,6 +3,8 @@ package com.gabinx.chapters.e2e;
 import com.gabinx.chapters.e2e.gametest.E2eGameTests;
 import com.mojang.logging.LogUtils;
 import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.item.Item;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.IEventBus;
@@ -27,7 +29,9 @@ public final class ChaptersE2e {
         if (Boolean.getBoolean("chapters.e2e.perf")) {
             for (int i = 0; i < PERF_ITEMS; i++) {
                 int index = i;
-                PERF_ITEM_REGISTER.register("perf_" + index, () -> new Item(new Item.Properties()));
+                Identifier itemId = Identifier.fromNamespaceAndPath(MOD_ID, "perf_" + index);
+                PERF_ITEM_REGISTER.register("perf_" + index, () -> new Item(new Item.Properties()
+                        .setId(ResourceKey.create(Registries.ITEM, itemId))));
             }
             PERF_ITEM_REGISTER.register(modBus);
         }

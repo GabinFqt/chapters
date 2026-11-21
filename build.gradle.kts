@@ -57,6 +57,14 @@ repositories {
     }
 }
 
+// Dev-only GameTests and the client harness. Not part of the published jar (jar uses source set main).
+val e2eSourceSet = sourceSets.create("e2e") {
+    compileClasspath += sourceSets.main.get().compileClasspath
+    runtimeClasspath += sourceSets.main.get().runtimeClasspath
+    compileClasspath += sourceSets.main.get().output
+    runtimeClasspath += sourceSets.main.get().output
+}
+
 neoForge {
     version = property("neo_version").toString()
 
@@ -65,11 +73,21 @@ neoForge {
         mappingsVersion = "2024.11.17"
     }
 
+    // Assigned inside mods {} (that block runs immediately) and read by the runs below.
+    var chaptersMod: net.neoforged.moddevgradle.dsl.ModModel? = null
+    var e2eMod: net.neoforged.moddevgradle.dsl.ModModel? = null
+
     mods {
-        create(property("mod_id").toString()) {
+        chaptersMod = create(property("mod_id").toString()) {
             sourceSet(sourceSets.main.get())
         }
+        e2eMod = create("chapters_e2e") {
+            sourceSet(e2eSourceSet)
+        }
     }
+
+    val chaptersOnly = setOf(chaptersMod!!)
+    val withE2e = setOf(chaptersMod!!, e2eMod!!)
 
     unitTest {
         enable()
@@ -82,14 +100,33 @@ neoForge {
         create("client") {
             client()
             programArguments.addAll("--username", "Alice")
+            loadedMods.set(chaptersOnly)
         }
         create("clientBob") {
             client()
             programArguments.addAll("--username", "Bob")
             gameDirectory = file("run-bob")
+            loadedMods.set(chaptersOnly)
         }
         create("server") {
             server()
+            loadedMods.set(chaptersOnly)
+        }
+        // Dedicated server with -Dneoforge.gameTestServer=true (see Minecraft server Main).
+        create("gameTestServer") {
+            server()
+            gameDirectory = file("run-gametest")
+            systemProperty("neoforge.gameTestServer", "true")
+            systemProperty("neoforge.enabledGameTestNamespaces", "chapters")
+            loadedMods.set(withE2e)
+        }
+        create("clientE2e") {
+            client()
+            gameDirectory = file("run-e2e")
+            programArguments.addAll("--username", "E2E")
+            systemProperty("chapters.e2e", "true")
+            logLevel.set(org.slf4j.event.Level.DEBUG)
+            loadedMods.set(withE2e)
         }
     }
 }
@@ -216,6 +253,8 @@ dependencies {
     val jeiVersion = property("jei_version").toString()
     compileOnly("mezz.jei:jei-$minecraftVersion-neoforge:$jeiVersion")
     runtimeOnly("mezz.jei:jei-$minecraftVersion-neoforge:$jeiVersion")
+    // JEI 19.71+ requires this mod, but declares the Maven dependency optional, so dev runs must ask for it.
+    runtimeOnly("net.mezzdev.config:mezz_config_gui-$minecraftVersion-neoforge:mc$minecraftVersion-0.7.1")
 
     val mekanismVersion = property("mekanism_version").toString()
     compileOnly("mekanism:Mekanism:$mekanismVersion:api")

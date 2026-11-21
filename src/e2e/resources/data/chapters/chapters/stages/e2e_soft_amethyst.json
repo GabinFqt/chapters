@@ -1,0 +1,11 @@
+{
+  "restrictions": {
+    "preventPickup": true,
+    "dropFromInventory": false,
+    "preventCraft": true,
+    "hideInJei": false
+  },
+  "items": [
+    "minecraft:amethyst_shard"
+  ]
+}

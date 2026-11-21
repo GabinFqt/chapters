@@ -1,0 +1,9 @@
+{
+  "items": [
+    "#minecraft:planks",
+    {
+      "id": "minecraft:oak_planks",
+      "preventPickup": false
+    }
+  ]
+}

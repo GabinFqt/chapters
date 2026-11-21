@@ -50,6 +50,14 @@ public final class ChaptersJeiModPlugin implements IModPlugin {
     @Nullable
     private static IJeiRuntime runtime;
 
+    /** JEI runtime once {@link #onRuntimeAvailable} has run. Null on a dedicated server or before JEI starts. */
+    @Nullable
+    public static IJeiRuntime runtimeOrNull() {
+        synchronized (LOCK) {
+            return runtime;
+        }
+    }
+
     private static final Set<ResourceLocation> lastLockedItems = new LinkedHashSet<>();
     private static final Set<ResourceLocation> lastLockedFluids = new LinkedHashSet<>();
     private static final Set<ResourceLocation> lastLockedChemicals = new LinkedHashSet<>();

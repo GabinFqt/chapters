@@ -1,0 +1,9 @@
+{
+  "restrictions": {
+    "preventTransfer": false,
+    "hideInJei": true
+  },
+  "fluids": [
+    "minecraft:lava"
+  ]
+}

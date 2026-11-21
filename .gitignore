@@ -16,6 +16,8 @@ out/
 # Minecraft / NeoForge dev environment
 run/
 run-bob/
+run-e2e/
+run-gametest/
 
 # Shared KubeJS dev folder (canonical source for run/kubejs and run-bob/kubejs symlinks).
 # We track the scripts you actually edit and ignore everything KubeJS regenerates on boot.

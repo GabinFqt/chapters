@@ -34,7 +34,7 @@ public final class ChaptersRegistries {
     }
 
     private static void registerPayloads(RegisterPayloadHandlersEvent event) {
-        PayloadRegistrar registrar = event.registrar("2");
+        PayloadRegistrar registrar = event.registrar("3");
         registrar.playToClient(ClientboundStagesPayload.TYPE, ClientboundStagesPayload.STREAM_CODEC, ClientboundStagesPayload::handle);
         registrar.playToClient(ClientboundStageDeltaPayload.TYPE, ClientboundStageDeltaPayload.STREAM_CODEC, ClientboundStageDeltaPayload::handle);
         registrar.playToClient(

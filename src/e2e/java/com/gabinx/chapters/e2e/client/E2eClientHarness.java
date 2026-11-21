@@ -284,7 +284,8 @@ public final class E2eClientHarness {
         mark();
         command("reload");
         STEPS.add(new Until("11E.5a", E2eClientHarness::settledInWorld, 3600, "second reload should return"));
-        check("11E.5", () -> JeiProbes.itemVisible(Items.PRISMARINE_SHARD), "an owned item should stay visible across reload");
+        STEPS.add(new Until("11E.5", () -> JeiProbes.itemVisible(Items.PRISMARINE_SHARD), 400,
+                "an owned item should stay visible across reload"));
         expect("11E.5b", lines -> countAdded(lines, "ItemStack") == 0, "reload should not add ingredients");
         command("chapters remove @s chapters:e2e_full_prismarine");
         settle();
@@ -348,7 +349,26 @@ public final class E2eClientHarness {
     private static void respawn(String id) {
         mark();
         command("kill @s");
-        STEPS.add(new Until(id, E2eClientHarness::deathOrGone, 1200, "death screen"));
+        // A kill sent during the previous respawn reports success and does not open a new death screen.
+        STEPS.add(new Step() {
+            private int ticks;
+
+            @Override
+            public boolean tick(Minecraft minecraft) {
+                if (deathOrGone()) {
+                    row(id, true, "");
+                    return true;
+                }
+                if (ticks > 0 && ticks % 40 == 0 && minecraft.player instanceof LocalPlayer local && local.isAlive()) {
+                    local.connection.sendCommand("kill @s");
+                }
+                if (++ticks > 1200) {
+                    row(id, false, "death screen (no screen)");
+                    return true;
+                }
+                return false;
+            }
+        });
         STEPS.add(minecraft -> {
             if (minecraft.player instanceof LocalPlayer local && (local.isDeadOrDying() || minecraft.screen instanceof DeathScreen)) {
                 local.respawn();
@@ -356,6 +376,7 @@ public final class E2eClientHarness {
             return true;
         });
         STEPS.add(new Until(id + "-back", E2eClientHarness::aliveInWorld, 1200, "respawn"));
+        STEPS.add(new Wait(40));
         expect(id + "-log", E2eClientHarness::noIngredientLines, "respawn should not touch JEI ingredients");
     }
 

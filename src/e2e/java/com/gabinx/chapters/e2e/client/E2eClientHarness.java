@@ -11,7 +11,6 @@ import net.minecraft.client.gui.screens.worldselection.CreateWorldScreen;
 import net.minecraft.client.gui.screens.worldselection.WorldCreationUiState;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.protocol.game.ServerboundClientCommandPacket;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.GameRules;
@@ -98,6 +97,8 @@ public final class E2eClientHarness {
             boot(minecraft);
             return;
         }
+        // A late credits screen blocks every wait that needs no screen, including /reload.
+        dismissWinScreen(minecraft);
         if (stepIndex >= STEPS.size()) {
             finish();
             return;
@@ -615,14 +616,19 @@ public final class E2eClientHarness {
         return minecraft.player != null && minecraft.player.isAlive() && minecraft.level != null && minecraft.screen == null && JeiProbes.ready();
     }
 
+    /**
+     * Closing the credits screen with {@code setScreen(null)} only calls {@code removed()}.
+     * {@link WinScreen#onClose()} is what sends the respawn and actually leaves the End.
+     */
+    private static void dismissWinScreen(Minecraft minecraft) {
+        if (minecraft.screen instanceof WinScreen win && minecraft.player != null) {
+            win.onClose();
+        }
+    }
+
     private static boolean backInOverworld() {
         Minecraft minecraft = Minecraft.getInstance();
-        // Closing the credits screen only calls removed(). The respawn packet is what brings the player back.
-        if (minecraft.screen instanceof WinScreen && minecraft.player != null) {
-            minecraft.player.connection.send(
-                    new ServerboundClientCommandPacket(ServerboundClientCommandPacket.Action.PERFORM_RESPAWN));
-            minecraft.setScreen(null);
-        }
+        dismissWinScreen(minecraft);
         return minecraft.player != null
                 && minecraft.player.isAlive()
                 && minecraft.level != null

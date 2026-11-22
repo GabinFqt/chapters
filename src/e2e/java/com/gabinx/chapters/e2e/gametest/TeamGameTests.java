@@ -2,8 +2,10 @@ package com.gabinx.chapters.e2e.gametest;
 
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.gabinx.chapters.ChaptersConfig;
+import com.gabinx.chapters.ChaptersRegistries;
 import com.gabinx.chapters.api.ChaptersAPI;
 import com.gabinx.chapters.compat.ftb.FtbCompat;
+import com.gabinx.chapters.stage.PlayerStages;
 import com.gabinx.chapters.e2e.E2ePlayers;
 import com.gabinx.chapters.e2e.E2eStages;
 import com.gabinx.chapters.e2e.E2eSupport;
@@ -12,6 +14,8 @@ import com.gabinx.chapters.network.ClientboundStagesPayload;
 import com.gabinx.chapters.stage.StageManager;
 import dev.ftb.mods.ftbteams.api.FTBTeamsAPI;
 import dev.ftb.mods.ftbteams.api.Team;
+import dev.ftb.mods.ftbteams.api.event.TeamPlayerLoggedInEvent;
+import dev.ftb.mods.ftbteams.api.neoforge.FTBTeamsEvent;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.server.level.ServerLevel;
@@ -19,7 +23,9 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Relative;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
+import net.neoforged.neoforge.common.NeoForge;
 
+import java.util.List;
 import java.util.Set;
 
 import java.lang.reflect.InvocationTargetException;
@@ -100,6 +106,51 @@ public class TeamGameTests {
         helper.assertTrue(full, "B should receive a full stage sync");
         helper.assertFalse(delta, "a party change should not also send a per-player delta");
         helper.succeed();
+    }
+
+    /**
+     * A stage left in the player attachment must not come back onto the personal team after login.
+     */
+    public static void legacy_login_remove(GameTestHelper helper) {
+        ChaptersConfig.SYNC_WITH_FTB_TEAMS.set(true);
+        helper.assertTrue(StageManager.get().get(E2eStages.SOFT_AMETHYST).isPresent(), "e2e stages were not loaded");
+        helper.assertTrue(FtbCompat.isTeamsLoaded(), "FTB Teams should be loaded in this run");
+        helper.assertTrue(FTBTeamsAPI.api().isManagerLoaded(), "the FTB team manager should be loaded");
+        ServerPlayer player = E2ePlayers.join(helper).player();
+        Team team = FTBTeamsAPI.api().getManager().getTeamForPlayer(player).orElseThrow();
+        helper.assertFalse(team.isPartyTeam(), "the joined player should be on a personal team");
+
+        ChaptersAPI.addStage(player, E2eStages.FULL_PRISMARINE);
+        ChaptersAPI.addStage(player, E2eStages.PLANKS);
+        player.setData(
+                ChaptersRegistries.PLAYER_STAGES.get(),
+                new PlayerStages(List.of(E2eStages.FULL_PRISMARINE, E2eStages.PLANKS)));
+
+        ChaptersAPI.removeStage(player, E2eStages.FULL_PRISMARINE);
+        helper.assertFalse(
+                ChaptersAPI.hasStage(player, E2eStages.FULL_PRISMARINE),
+                "remove should drop the stage before the next login");
+        login(team, player);
+        helper.assertFalse(
+                ChaptersAPI.hasStage(player, E2eStages.FULL_PRISMARINE),
+                "a removed stage should stay gone after login copies the player file");
+        helper.assertTrue(
+                ChaptersAPI.hasStage(player, E2eStages.PLANKS),
+                "a stage that was kept should still be on the team");
+        helper.assertTrue(
+                player.getData(ChaptersRegistries.PLAYER_STAGES.get()).view().isEmpty(),
+                "login should clear the player file after copying it");
+
+        ChaptersAPI.removeStage(player, E2eStages.PLANKS);
+        login(team, player);
+        helper.assertFalse(
+                ChaptersAPI.hasStage(player, E2eStages.PLANKS),
+                "removing the last stage should survive the next login");
+        helper.succeed();
+    }
+
+    private static void login(Team team, ServerPlayer player) {
+        NeoForge.EVENT_BUS.post(new FTBTeamsEvent.TeamPlayerLoggedIn(new TeamPlayerLoggedInEvent.Data(team, player)));
     }
 
     private record Party(E2ePlayers.Joined a, E2ePlayers.Joined b, Team team) {

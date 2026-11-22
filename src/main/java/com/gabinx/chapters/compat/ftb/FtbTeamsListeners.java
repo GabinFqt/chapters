@@ -160,12 +160,14 @@ final class FtbTeamsListeners {
             return;
         }
 
+        Set<Identifier> legacyIds = Set.copyOf(legacy.view());
         int added = 0;
-        for (Identifier rl : legacy.view()) {
+        for (Identifier rl : legacyIds) {
             if (FtbTeamsBridge.addStage(player, rl)) {
                 added++;
             }
         }
+        player.setData(ChaptersRegistries.PLAYER_STAGES.get(), PlayerStages.empty());
         if (added > 0) {
             Chapters.LOGGER.info(
                     "Chapters: migrated {} legacy stage(s) from player {} attachment into personal team {}",

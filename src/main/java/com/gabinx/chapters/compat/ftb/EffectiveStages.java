@@ -75,8 +75,15 @@ public final class EffectiveStages {
      */
     public static boolean remove(ServerPlayer player, Identifier stage) {
         if (useTeamStages() && FtbTeamsBridge.hasTeam(player)) {
-            return FtbTeamsBridge.removeStage(player, stage);
+            boolean removedFromTeam = FtbTeamsBridge.removeStage(player, stage);
+            boolean removedFromAttachment = removeFromAttachment(player, stage);
+            return removedFromTeam || removedFromAttachment;
         }
+        return removeFromAttachment(player, stage);
+    }
+
+    /** Drops a leftover copy so the next login cannot copy it back onto the team. */
+    private static boolean removeFromAttachment(ServerPlayer player, Identifier stage) {
         PlayerStages stages = player.getData(ChaptersRegistries.PLAYER_STAGES.get());
         boolean changed = stages.remove(stage);
         if (changed) {

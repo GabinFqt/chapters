@@ -71,6 +71,7 @@ public final class E2eGameTests {
         instance(event, teams, "party_end", 80, TeamGameTests::party_ejectsBothFromEnd);
         instance(event, teams, "party_leave", 80, TeamGameTests::party_leaveKeepsCopyThenDiverges);
         instance(event, teams, "party_sync", 80, TeamGameTests::party_syncsFullPayloadNotDelta);
+        instance(event, teams, "legacy_login_remove", 80, TeamGameTests::legacy_login_remove);
     }
 
     private static void instance(

@@ -122,7 +122,7 @@ Platforms with an empty project id are skipped.
 ./gradlew runClientE2e
 ```
 
-`runGameTestServer` is headless. It checks pickup, drops, crafting, fluids, the End, respawn, and `/reload`. Success is the log line `All N required tests passed`. On this line the process can still exit 0 when tests fail, so read that line (CI does).
+`runGameTestServer` is headless. It checks pickup, drops, crafting, fluids, the End, respawn, and `/reload`. Success is the log line `All N required tests passed`. On this line the process can still exit 0 when tests fail, so read that line (CI does). CI also checks that N equals `EXPECTED_GAMETESTS` in `.github/workflows/build.yml`, so bump that value whenever you add or remove a GameTest.
 
 `runClientE2e` opens a flat creative world and checks JEI, the recipe-viewer log lines, respawn, and rejoin. It writes `run-e2e/e2e-report.md`. It needs a display. GitHub Actions runs it under `xvfb`.
 

@@ -12,7 +12,7 @@ jobs:
   release:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Guard tag for this line
         run: |
@@ -25,7 +25,7 @@ jobs:
               ;;
           esac
 
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '25'
@@ -41,7 +41,7 @@ jobs:
           echo "Using $JAR"
 
       - name: GitHub Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           files: ${{ steps.jar.outputs.path }}
           generate_release_notes: true

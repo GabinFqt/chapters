@@ -79,11 +79,11 @@ public class TravelGameTests {
     }
 
     /**
-     * Quit and reopen, not {@code /reload}. Disconnect saves through {@code PlayerDataStorage}
-     * and the next join reads that file back.
+     * Without team sync, stages live in the player file. Quitting saves it through {@code PlayerDataStorage}
+     * and the next join reads it back, so this checks what lands on disk (not {@code /reload}).
      */
     @GameTest(template = "empty", batch = "chapters", timeoutTicks = 40)
-    public static void rejoin_keepsAddedAndRemovedStages(GameTestHelper helper) {
+    public static void savedPlayerFile_keepsAddedAndRemovedStages(GameTestHelper helper) {
         E2eSupport.prepare(helper);
         ChaptersConfig.SYNC_WITH_FTB_TEAMS.set(false);
         ServerPlayer player = E2ePlayers.join(helper).player();
@@ -107,11 +107,11 @@ public class TravelGameTests {
         helper.succeed();
     }
 
-    /** Reads the file. {@code PlayerDataStorage.load} would apply it back onto the live player. */
     private static void save(ServerPlayer player) {
         storage(player).save(player);
     }
 
+    /** Reads the file. {@code PlayerDataStorage.load} would apply it back onto the live player. */
     private static Set<ResourceLocation> stagesInPlayerFile(ServerPlayer player) {
         try {
             CompoundTag tag = NbtIo.readCompressed(

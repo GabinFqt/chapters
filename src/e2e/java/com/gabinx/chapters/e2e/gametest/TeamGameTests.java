@@ -19,6 +19,7 @@ import dev.ftb.mods.ftbteams.api.event.TeamEvent;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.Items;
@@ -29,6 +30,7 @@ import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -118,40 +120,74 @@ public class TeamGameTests {
      */
     @GameTest(template = "empty", batch = "chaptersteams", timeoutTicks = 80)
     public static void legacy_login_remove(GameTestHelper helper) {
-        ChaptersConfig.SYNC_WITH_FTB_TEAMS.set(true);
-        helper.assertTrue(StageManager.get().get(E2eStages.SOFT_AMETHYST).isPresent(), "e2e stages were not loaded");
-        helper.assertTrue(FtbCompat.isTeamsLoaded(), "FTB Teams should be loaded in this run");
-        helper.assertTrue(FTBTeamsAPI.api().isManagerLoaded(), "the FTB team manager should be loaded");
-        ServerPlayer player = E2ePlayers.join(helper).player();
-        Team team = FTBTeamsAPI.api().getManager().getTeamForPlayer(player).orElseThrow();
-        helper.assertFalse(team.isPartyTeam(), "the joined player should be on a personal team");
+        Solo solo = solo(helper);
+        ServerPlayer player = solo.player();
 
         ChaptersAPI.addStage(player, E2eStages.FULL_PRISMARINE);
         ChaptersAPI.addStage(player, E2eStages.PLANKS);
-        player.setData(
-                ChaptersRegistries.PLAYER_STAGES.get(),
-                new PlayerStages(List.of(E2eStages.FULL_PRISMARINE, E2eStages.PLANKS)));
+        setPlayerFile(player, E2eStages.FULL_PRISMARINE, E2eStages.PLANKS);
 
         ChaptersAPI.removeStage(player, E2eStages.FULL_PRISMARINE);
         helper.assertFalse(
                 ChaptersAPI.hasStage(player, E2eStages.FULL_PRISMARINE),
                 "remove should drop the stage before the next login");
-        login(team, player);
+        login(solo.team(), player);
         helper.assertFalse(
                 ChaptersAPI.hasStage(player, E2eStages.FULL_PRISMARINE),
                 "a removed stage should stay gone after login copies the player file");
         helper.assertTrue(
                 ChaptersAPI.hasStage(player, E2eStages.PLANKS),
                 "a stage that was kept should still be on the team");
-        helper.assertTrue(
-                player.getData(ChaptersRegistries.PLAYER_STAGES.get()).view().isEmpty(),
-                "login should clear the player file after copying it");
+        helper.assertTrue(playerFile(player).isEmpty(), "login should clear the player file after copying it");
 
         ChaptersAPI.removeStage(player, E2eStages.PLANKS);
-        login(team, player);
+        login(solo.team(), player);
         helper.assertFalse(
                 ChaptersAPI.hasStage(player, E2eStages.PLANKS),
                 "removing the last stage should survive the next login");
+        helper.succeed();
+    }
+
+    /**
+     * A stage only left in the player attachment is dropped by remove, but the player never had it,
+     * so remove (and KubeJS {@code stages.remove}) reports nothing removed.
+     */
+    @GameTest(template = "empty", batch = "chaptersteams", timeoutTicks = 80)
+    public static void legacy_remove_reportsTeamOnly(GameTestHelper helper) {
+        ServerPlayer player = solo(helper).player();
+        setPlayerFile(player, E2eStages.PLANKS);
+        helper.assertFalse(
+                ChaptersAPI.removeStage(player, E2eStages.PLANKS),
+                "a stage only in the player file was not on the team, so nothing was removed");
+        helper.assertTrue(playerFile(player).isEmpty(), "remove should still drop the leftover copy");
+
+        ChaptersAPI.addStage(player, E2eStages.FULL_PRISMARINE);
+        helper.assertTrue(
+                ChaptersAPI.removeStage(player, E2eStages.FULL_PRISMARINE),
+                "removing a team stage should report it");
+        helper.succeed();
+    }
+
+    /**
+     * Joining merges the player attachment into the party. A stage the party removes afterwards must not
+     * come back from that attachment once the player leaves and logs in on their personal team.
+     */
+    @GameTest(template = "empty", batch = "chaptersteams", timeoutTicks = 80)
+    public static void party_joinClearsPlayerFile(GameTestHelper helper) {
+        Party party = party(helper, E2eStages.FULL_PRISMARINE);
+        helper.assertTrue(
+                ChaptersAPI.hasStage(party.a.player(), E2eStages.FULL_PRISMARINE),
+                "joining should merge B's player file into the party");
+        helper.assertTrue(playerFile(party.b.player()).isEmpty(), "joining should clear B's player file");
+
+        E2eSupport.revoke(party.a.player(), E2eStages.FULL_PRISMARINE);
+        leave(party.team, party.b.player().getUUID());
+        Team personal = FTBTeamsAPI.api().getManager().getTeamForPlayer(party.b.player()).orElseThrow();
+        helper.assertFalse(personal.isPartyTeam(), "B should be back on a personal team");
+        login(personal, party.b.player());
+        helper.assertFalse(
+                ChaptersAPI.hasStage(party.b.player(), E2eStages.FULL_PRISMARINE),
+                "a stage the party removed should stay gone after B leaves and logs in");
         helper.succeed();
     }
 
@@ -159,19 +195,46 @@ public class TeamGameTests {
         TeamEvent.PLAYER_LOGGED_IN.invoker().accept(new PlayerLoggedInAfterTeamEvent(team, player));
     }
 
-    private record Party(E2ePlayers.Joined a, E2ePlayers.Joined b, Team team) {
+    private static void setPlayerFile(ServerPlayer player, ResourceLocation... stages) {
+        player.setData(ChaptersRegistries.PLAYER_STAGES.get(), new PlayerStages(List.of(stages)));
     }
 
-    private static Party party(GameTestHelper helper) {
+    private static Set<ResourceLocation> playerFile(ServerPlayer player) {
+        return player.getData(ChaptersRegistries.PLAYER_STAGES.get()).view();
+    }
+
+    private static void teamsReady(GameTestHelper helper) {
         ChaptersConfig.SYNC_WITH_FTB_TEAMS.set(true);
         helper.assertTrue(StageManager.get().get(E2eStages.SOFT_AMETHYST).isPresent(), "e2e stages were not loaded");
         helper.assertTrue(FtbCompat.isTeamsLoaded(), "FTB Teams should be loaded in this run");
         helper.assertTrue(FTBTeamsAPI.api().isManagerLoaded(), "the FTB team manager should be loaded");
+    }
+
+    private record Solo(ServerPlayer player, Team team) {
+    }
+
+    private static Solo solo(GameTestHelper helper) {
+        teamsReady(helper);
+        ServerPlayer player = E2ePlayers.join(helper).player();
+        Team team = FTBTeamsAPI.api().getManager().getTeamForPlayer(player).orElseThrow();
+        helper.assertFalse(team.isPartyTeam(), "the joined player should be on a personal team");
+        return new Solo(player, team);
+    }
+
+    private record Party(E2ePlayers.Joined a, E2ePlayers.Joined b, Team team) {
+    }
+
+    /** {@code bPlayerFile} is written after B's login and before B joins, so only the party join sees it. */
+    private static Party party(GameTestHelper helper, ResourceLocation... bPlayerFile) {
+        teamsReady(helper);
         E2ePlayers.Joined a = E2ePlayers.join(helper);
         E2ePlayers.Joined b = E2ePlayers.join(helper);
         helper.assertTrue(
                 FTBTeamsAPI.api().getManager().getTeamForPlayer(a.player()).isPresent(),
                 "A should have a personal team after login");
+        if (bPlayerFile.length > 0) {
+            setPlayerFile(b.player(), bPlayerFile);
+        }
         try {
             Team team = FTBTeamsAPI.api().getManager().createPartyTeam(a.player(), "e2e", null, null);
             Method join = team.getClass().getMethod("join", ServerPlayer.class);

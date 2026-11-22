@@ -17,6 +17,7 @@ public final class ChaptersConfig {
                         "When true (default) and FTB Teams is installed, chapter unlocks are stored on the player's",
                         "team (TEAM_STAGES) and shared with party members. When false, Chapters always uses the",
                         "per-player attachment store even if FTB Teams is present (standalone mode).",
+                        "Turning it off in an existing world does not copy team stages back to the players.",
                         "FTB Library / Quests Stage Reward and Stage Task still work either way.")
                 .define("syncWithFtbTeams", true);
         builder.pop();

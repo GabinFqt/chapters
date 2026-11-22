@@ -1,7 +1,7 @@
-# Unreleased
+# Chapters 2.5
 
 ## Changes
-- **Vanilla buckets**: filling and placing a bucket stay blocked when that fluid has `preventTransfer` on. The e2e suite now clicks the vanilla bucket item, and the wiki uses the same wording on both lines.
+- **Large packs**: lock checks, JEI hides and reveals, crafting, and stage sync are faster. The stage index sent to the client is a smaller namespace-grouped payload, so the client and server need this same version.
 
 ---
 

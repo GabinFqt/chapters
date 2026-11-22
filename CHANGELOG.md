@@ -1,6 +1,7 @@
-# Unreleased
+# Chapters 1.5
 
 ## Changes
+- **Large packs**: lock checks, JEI hides and reveals, crafting, and stage sync are faster. The stage index sent to the client is a smaller namespace-grouped payload, so the client and server need this same version.
 - **Vanilla buckets**: filling or emptying a bucket is now cancelled when that fluid has `preventTransfer` on. Previously only tank and `FluidUtil` transfers were gated, so a normal bucket click could still move a locked fluid until the inventory audit dropped the bucket.
 
 ---

@@ -1,5 +1,6 @@
 package com.gabinx.chapters.e2e.gametest;
 
+import com.gabinx.chapters.ChaptersConfig;
 import com.gabinx.chapters.api.ChaptersAPI;
 import com.gabinx.chapters.e2e.E2ePlayers;
 import com.gabinx.chapters.e2e.E2eStages;
@@ -7,15 +8,20 @@ import com.gabinx.chapters.e2e.E2eSupport;
 import com.gabinx.chapters.network.ClientboundStagesPayload;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.Identifier;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.server.players.NameAndId;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.Relative;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
 
+import java.util.LinkedHashSet;
 import java.util.Set;
 
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -61,6 +67,53 @@ public class TravelGameTests {
         }
         helper.assertTrue(sawStages, "respawn should send a stage sync");
         helper.succeed();
+    }
+
+    /**
+     * Quit and reopen, not {@code /reload}. Disconnect saves through {@code PlayerDataStorage}
+     * and the next join reads that file back.
+     */
+    public static void rejoin_keepsAddedAndRemovedStages(GameTestHelper helper) {
+        E2eSupport.prepare(helper);
+        ChaptersConfig.SYNC_WITH_FTB_TEAMS.set(false);
+        ServerPlayer player = E2ePlayers.join(helper).player();
+        E2eSupport.grant(player, E2eStages.FULL_PRISMARINE);
+        E2eSupport.grant(player, E2eStages.PLANKS);
+
+        MinecraftServer server = player.level().getServer();
+        NameAndId id = new NameAndId(player.getGameProfile());
+        server.getPlayerList().getPlayerIo().save(player);
+        Set<Identifier> added = stagesInPlayerFile(server, id);
+        helper.assertTrue(added.contains(E2eStages.FULL_PRISMARINE),
+                "an added stage should still be in the player file");
+        helper.assertTrue(added.contains(E2eStages.PLANKS),
+                "a second stage should still be in the player file");
+
+        ChaptersAPI.removeStage(player, E2eStages.FULL_PRISMARINE);
+        server.getPlayerList().getPlayerIo().save(player);
+        Set<Identifier> removed = stagesInPlayerFile(server, id);
+        helper.assertFalse(removed.contains(E2eStages.FULL_PRISMARINE),
+                "a removed stage should stay out of the player file");
+        helper.assertTrue(removed.contains(E2eStages.PLANKS),
+                "the stage that was kept should still be in the player file");
+        helper.succeed();
+    }
+
+    /** The attachment compound the next join deserializes. No second player: a connectionless one gets ticked and crashes. */
+    private static Set<Identifier> stagesInPlayerFile(MinecraftServer server, NameAndId id) {
+        CompoundTag tag = server.getPlayerList().loadPlayerData(id).orElseThrow(
+                () -> new IllegalStateException("player file was not written for " + id));
+        ListTag list = tag.getCompoundOrEmpty("neoforge:attachments")
+                .getCompoundOrEmpty("chapters:player_stages")
+                .getListOrEmpty("stages");
+        Set<Identifier> ids = new LinkedHashSet<>();
+        for (int i = 0; i < list.size(); i++) {
+            Identifier parsed = Identifier.tryParse(list.getString(i).orElse(""));
+            if (parsed != null) {
+                ids.add(parsed);
+            }
+        }
+        return ids;
     }
 
     public static void reload_keepsStagesAndLocks(GameTestHelper helper) {

@@ -66,6 +66,7 @@ public final class E2eGameTests {
         instance(event, normal, "craft_planks_tag", 40, CraftGameTests::planksTag_blocksOakAndBirchOutputs);
         instance(event, normal, "end_travel", 40, TravelGameTests::endTravel_blockedUntilStage);
         instance(event, normal, "respawn_stages", 40, TravelGameTests::respawn_keepsStagesAndSyncsThem);
+        instance(event, normal, "rejoin_stages", 40, TravelGameTests::rejoin_keepsAddedAndRemovedStages);
         instance(event, reload, "reload_stages", 400, TravelGameTests::reload_keepsStagesAndLocks);
         instance(event, teams, "party_share", 80, TeamGameTests::party_sharesUnlockAndAudit);
         instance(event, teams, "party_end", 80, TeamGameTests::party_ejectsBothFromEnd);

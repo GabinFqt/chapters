@@ -1,3 +1,11 @@
+# Chapters 2.6
+
+## Changes
+- **FTB Teams, removed stages**: a stage removed with `/chapters remove`, FTB Quests, or KubeJS no longer comes back after leaving and rejoining the world. Stages left in the player file from before team sync handled them were copied back onto the team at every login. That copy is now cleared once it is on the team (at login or on party join), and a remove also drops it. In a world that already hit this, the old stages come back one last time on the first login with this version: remove them once more and they stay gone.
+- **KubeJS `stages.remove`**: with team sync on, it returns `true` only when the team actually had the stage.
+
+---
+
 # Chapters 2.5
 
 ## Changes

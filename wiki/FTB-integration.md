@@ -47,7 +47,7 @@ A solo player keeps stages on their own personal team until they join a party.
 	syncWithFtbTeams = false
 ```
 
-The default is `true`. Set `false` **before** a world matters to you. Flipping it mid-save leaves existing unlocks on the store you just stopped reading.
+The default is `true`. Set `false` **before** a world matters to you. Turning it on later moves each player's stages onto their personal team at their next login. Turning it off later does not copy team stages back to the players: they only keep what is in their own store, which is usually nothing.
 
 With `false`, or with FTB Teams absent, each player has their own stages. Stage Reward, Stage Task, and Stage Required still work.
 

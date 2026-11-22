@@ -69,7 +69,8 @@ final class FtbTeamsListeners {
 
     /**
      * Party join: union previous personal stages + current party stages into the party store,
-     * so every online member sees the merged set.
+     * so every online member sees the merged set. The attachment is cleared once merged, so a stage
+     * the party later removes cannot come back from it.
      */
     private static void onJoinedParty(FTBTeamsEvent.PlayerJoinedPartyTeam event) {
         if (!EffectiveStages.useTeamStages()) {
@@ -94,6 +95,9 @@ final class FtbTeamsListeners {
         Set<String> merged = toStrings(mergedIds);
 
         FtbTeamsBridge.writeStageStrings(party, merged);
+        if (player != null) {
+            player.setData(ChaptersRegistries.PLAYER_STAGES.get(), PlayerStages.empty());
+        }
         Chapters.LOGGER.info(
                 "Chapters: merged {} stage(s) into party {} after {} joined",
                 merged.size(),

@@ -70,10 +70,10 @@ public class TravelGameTests {
     }
 
     /**
-     * Quit and reopen, not {@code /reload}. Disconnect saves through {@code PlayerDataStorage}
-     * and the next join reads that file back.
+     * Without team sync, stages live in the player file. Quitting saves it through {@code PlayerDataStorage}
+     * and the next join reads it back, so this checks what lands on disk (not {@code /reload}).
      */
-    public static void rejoin_keepsAddedAndRemovedStages(GameTestHelper helper) {
+    public static void savedPlayerFile_keepsAddedAndRemovedStages(GameTestHelper helper) {
         E2eSupport.prepare(helper);
         ChaptersConfig.SYNC_WITH_FTB_TEAMS.set(false);
         ServerPlayer player = E2ePlayers.join(helper).player();

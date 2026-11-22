@@ -66,13 +66,15 @@ public final class E2eGameTests {
         instance(event, normal, "craft_planks_tag", 40, CraftGameTests::planksTag_blocksOakAndBirchOutputs);
         instance(event, normal, "end_travel", 40, TravelGameTests::endTravel_blockedUntilStage);
         instance(event, normal, "respawn_stages", 40, TravelGameTests::respawn_keepsStagesAndSyncsThem);
-        instance(event, normal, "rejoin_stages", 40, TravelGameTests::rejoin_keepsAddedAndRemovedStages);
+        instance(event, normal, "player_file_stages", 40, TravelGameTests::savedPlayerFile_keepsAddedAndRemovedStages);
         instance(event, reload, "reload_stages", 400, TravelGameTests::reload_keepsStagesAndLocks);
         instance(event, teams, "party_share", 80, TeamGameTests::party_sharesUnlockAndAudit);
         instance(event, teams, "party_end", 80, TeamGameTests::party_ejectsBothFromEnd);
         instance(event, teams, "party_leave", 80, TeamGameTests::party_leaveKeepsCopyThenDiverges);
         instance(event, teams, "party_sync", 80, TeamGameTests::party_syncsFullPayloadNotDelta);
         instance(event, teams, "legacy_login_remove", 80, TeamGameTests::legacy_login_remove);
+        instance(event, teams, "legacy_remove_team_only", 80, TeamGameTests::legacy_remove_reportsTeamOnly);
+        instance(event, teams, "party_join_clears_file", 80, TeamGameTests::party_joinClearsPlayerFile);
     }
 
     private static void instance(

@@ -71,13 +71,13 @@ public final class EffectiveStages {
     }
 
     /**
-     * @return {@code true} if the stage was actually removed (was present before).
+     * @return {@code true} if the stage was actually removed (was present before). On a team, only the
+     * team copy counts: a leftover in the attachment is dropped too, but the player never had it.
      */
     public static boolean remove(ServerPlayer player, Identifier stage) {
         if (useTeamStages() && FtbTeamsBridge.hasTeam(player)) {
-            boolean removedFromTeam = FtbTeamsBridge.removeStage(player, stage);
-            boolean removedFromAttachment = removeFromAttachment(player, stage);
-            return removedFromTeam || removedFromAttachment;
+            removeFromAttachment(player, stage);
+            return FtbTeamsBridge.removeStage(player, stage);
         }
         return removeFromAttachment(player, stage);
     }

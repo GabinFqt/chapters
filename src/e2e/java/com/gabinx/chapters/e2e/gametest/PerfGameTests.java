@@ -83,6 +83,39 @@ public class PerfGameTests {
         report.append("add_stage_ms\t").append(fmt(ms(time(() -> ChaptersAPI.addStage(solo.player(), BULK))))).append("\n");
         report.append("remove_stage_ms\t").append(fmt(ms(time(() -> ChaptersAPI.removeStage(solo.player(), BULK))))).append("\n");
 
+        // Rebuild of every lock index from the loaded definitions (part of /reload and of every KubeJS flush).
+        var definitions = new java.util.LinkedHashMap<>(StageManager.get().book().allDefinitions());
+        report.append("rebuild_ms\t").append(fmt(median(7, () -> StageManager.get().book().replaceDatapack(definitions)))).append("\n");
+
+        int lookups = 200_000;
+        java.util.Set<ResourceLocation> owned = new java.util.LinkedHashSet<>();
+        for (int s = 0; s < PERF_STAGES; s += 2) {
+            owned.add(perfStage(s));
+        }
+
+        int soloChanges = 2 * PERF_STAGES;
+        report.append("stage_change_ms\t").append(fmt(ms(time(() -> {
+            for (int s = 0; s < PERF_STAGES; s++) {
+                ChaptersAPI.addStage(solo.player(), perfStage(s));
+            }
+            for (int s = 0; s < PERF_STAGES; s++) {
+                ChaptersAPI.removeStage(solo.player(), perfStage(s));
+            }
+        })) / soloChanges)).append("\n");
+        ResourceLocation[] ids = new ResourceLocation[64];
+        for (int i = 0; i < ids.length; i++) {
+            ids[i] = ResourceLocation.fromNamespaceAndPath("chapters_e2e", "perf_" + (i * 31 % 2000));
+        }
+        report.append("lookup_ns\t").append(fmt(median(5, () -> {
+            int hits = 0;
+            for (int i = 0; i < lookups; i++) {
+                if (StageManager.get().book().isItemRestricted(ids[i & 63], owned, com.gabinx.chapters.logic.Restriction.PICKUP)) {
+                    hits++;
+                }
+            }
+            sink = hits;
+        }) * 1_000_000.0 / lookups)).append("\n");
+
         if (FTBTeamsAPI.api().isManagerLoaded()) {
             ChaptersConfig.SYNC_WITH_FTB_TEAMS.set(true);
             try {
@@ -91,6 +124,44 @@ public class PerfGameTests {
                 team.getClass().getMethod("join", ServerPlayer.class).invoke(team, other.player());
                 report.append("party_add_ms\t").append(fmt(ms(time(() -> ChaptersAPI.addStage(solo.player(), BULK))))).append("\n");
                 report.append("party_remove_ms\t").append(fmt(ms(time(() -> ChaptersAPI.removeStage(solo.player(), BULK))))).append("\n");
+
+                // 40 adds then 40 removes on a 2-player party: time and bytes sent to both clients per change.
+                solo.drainPayloads();
+                other.drainPayloads();
+                int changes = 2 * PERF_STAGES;
+                long partyNanos = time(() -> {
+                    for (int s = 0; s < PERF_STAGES; s++) {
+                        ChaptersAPI.addStage(solo.player(), perfStage(s));
+                    }
+                    for (int s = 0; s < PERF_STAGES; s++) {
+                        ChaptersAPI.removeStage(solo.player(), perfStage(s));
+                    }
+                });
+                long[] sent = sentTotals(solo, other);
+                report.append("party_change_ms\t").append(fmt(ms(partyNanos) / changes)).append("\n");
+                report.append("party_change_payloads\t").append(fmt((double) sent[0] / changes)).append("\n");
+                report.append("party_change_index_payloads\t").append(fmt((double) sent[1] / changes)).append("\n");
+                report.append("party_change_kib\t").append(fmt(sent[2] / 1024.0 / changes)).append("\n");
+
+                // First login after FTB Teams is added: 40 stages in the player file move onto the personal team.
+                E2ePlayers.Joined legacy = E2ePlayers.join(helper);
+                Team personal = FTBTeamsAPI.api().getManager().getTeamForPlayer(legacy.player()).orElseThrow();
+                java.util.List<ResourceLocation> legacyStages = new java.util.ArrayList<>();
+                for (int s = 0; s < PERF_STAGES; s++) {
+                    legacyStages.add(perfStage(s));
+                }
+                legacy.player().setData(
+                        com.gabinx.chapters.ChaptersRegistries.PLAYER_STAGES.get(),
+                        new com.gabinx.chapters.stage.PlayerStages(legacyStages));
+                legacy.drainPayloads();
+                long migrateNanos = time(() -> dev.ftb.mods.ftbteams.api.event.TeamEvent.PLAYER_LOGGED_IN.invoker().accept(
+                        new dev.ftb.mods.ftbteams.api.event.PlayerLoggedInAfterTeamEvent(personal, legacy.player())));
+                long[] migrateSent = sentTotals(legacy);
+                helper.assertTrue(
+                        ChaptersAPI.getStages(legacy.player()).size() == PERF_STAGES, "migration should move every stage");
+                report.append("migrate40_ms\t").append(fmt(ms(migrateNanos))).append("\n");
+                report.append("migrate40_index_payloads\t").append(migrateSent[1]).append("\n");
+                report.append("migrate40_kib\t").append(fmt(migrateSent[2] / 1024.0)).append("\n");
             } catch (ReflectiveOperationException | com.mojang.brigadier.exceptions.CommandSyntaxException e) {
                 throw new IllegalStateException("perf party setup failed", e);
             }
@@ -117,6 +188,38 @@ public class PerfGameTests {
                 helper.fail(thrown.toString());
             }
         }, server);
+    }
+
+    private static final int PERF_STAGES = 40;
+    private static volatile Object sink;
+
+    private static ResourceLocation perfStage(int s) {
+        return ResourceLocation.fromNamespaceAndPath("chapters", "e2e_perf_" + s);
+    }
+
+    /** {all Chapters payloads, index payloads, encoded bytes} drained from the given players. */
+    private static long[] sentTotals(E2ePlayers.Joined... players) {
+        long[] totals = new long[3];
+        for (E2ePlayers.Joined joined : players) {
+            for (var payload : joined.drainPayloads()) {
+                if (!payload.type().id().getNamespace().equals("chapters")) {
+                    continue;
+                }
+                totals[0]++;
+                RegistryFriendlyByteBuf buf = new RegistryFriendlyByteBuf(Unpooled.buffer(), RegistryAccess.EMPTY);
+                if (payload instanceof ClientboundStageIndicesPayload indices) {
+                    totals[1]++;
+                    ClientboundStageIndicesPayload.STREAM_CODEC.encode(buf, indices);
+                } else if (payload instanceof com.gabinx.chapters.network.ClientboundStagesPayload stages) {
+                    com.gabinx.chapters.network.ClientboundStagesPayload.STREAM_CODEC.encode(buf, stages);
+                } else if (payload instanceof com.gabinx.chapters.network.ClientboundStageDeltaPayload delta) {
+                    com.gabinx.chapters.network.ClientboundStageDeltaPayload.STREAM_CODEC.encode(buf, delta);
+                }
+                totals[2] += buf.readableBytes();
+                buf.release();
+            }
+        }
+        return totals;
     }
 
     private static ClientboundStageIndicesPayload indices() {

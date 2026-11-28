@@ -103,6 +103,10 @@ val generateE2ePerfPack = tasks.register("generateE2ePerfPack") {
             body.append("  ]\n}\n")
             write("data/chapters/chapters/stages/e2e_perf_$s.json", body.toString())
         }
+        // Namespace entries: each one expands over the whole item registry when the indices are rebuilt.
+        for (s in 0 until 20) {
+            write("data/chapters/chapters/stages/e2e_perf_ns_$s.json", "{\n  \"items\": [\n    \"@chapters_e2e\"\n  ]\n}\n")
+        }
         for (r in 0 until recipes) {
             val input = r % items
             val output = (r + 1) % items

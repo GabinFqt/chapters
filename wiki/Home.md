@@ -94,7 +94,7 @@ Ops, as usual.
 | Command | What it does |
 | --- | --- |
 | `/chapters add <player> <stage>` | Grants the stage |
-| `/chapters remove <player> <stage>` | Revokes it |
+| `/chapters remove <player> <stage>` | Revokes it. Also works for a stage the player still has after you deleted it from the datapack or scripts |
 | `/chapters list <player>` | Stages that player has |
 | `/chapters check <player> <stage>` | `true` or `false` |
 | `/chapters reload` | Re-reads datapack JSON (same as `/reload`). Does not re-run KubeJS, and does not take stages away from players |

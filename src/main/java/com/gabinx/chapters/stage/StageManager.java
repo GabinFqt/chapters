@@ -10,14 +10,12 @@ import com.gabinx.chapters.event.DimensionHandler;
 import com.gabinx.chapters.event.InventoryAuditor;
 import com.gabinx.chapters.logic.RegistryContentCatalog;
 import com.gabinx.chapters.logic.StageBook;
-import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.packs.resources.ResourceManager;
 import net.minecraft.server.packs.resources.SimpleJsonResourceReloadListener;
 import net.minecraft.util.profiling.ProfilerFiller;
-import net.minecraft.world.item.ItemStack;
-import net.neoforged.neoforge.fluids.FluidStack;
+import net.neoforged.neoforge.event.server.ServerStartedEvent;
 import net.neoforged.neoforge.server.ServerLifecycleHooks;
 
 import java.util.Collection;
@@ -71,6 +69,17 @@ public final class StageManager extends SimpleJsonResourceReloadListener {
         ChaptersAPI.broadcastStageIndices();
     }
 
+    /**
+     * The first datapack load runs before the server exists, so dimension tags and namespaces resolve to nothing
+     * then. Rebuild once the levels are loaded so those entries lock from the first login, not only after /reload.
+     */
+    public void onServerStarted(ServerStartedEvent event) {
+        if (book.usesDimensionExpansion()) {
+            book.rebuild();
+            Chapters.LOGGER.info("Rebuilt stage indices now that dimensions are loaded");
+        }
+    }
+
     private static void auditLoadedPlayersAfterReload() {
         var server = ServerLifecycleHooks.getCurrentServer();
         if (server == null) {
@@ -112,33 +121,5 @@ public final class StageManager extends SimpleJsonResourceReloadListener {
 
     public Set<ResourceLocation> stageIds() {
         return book.stageIds();
-    }
-
-    public boolean isItemLocked(PlayerStages stages, ItemStack stack) {
-        if (stack.isEmpty()) {
-            return false;
-        }
-        ResourceLocation key = BuiltInRegistries.ITEM.getKey(stack.getItem());
-        return book.isItemLocked(key, stages.view());
-    }
-
-    public boolean isFluidLocked(PlayerStages stages, FluidStack stack) {
-        if (stack == null || stack.isEmpty()) {
-            return false;
-        }
-        ResourceLocation kind = StageDefinition.fluidKindRegistryKey(stack.getFluid());
-        return book.isFluidLocked(kind, stages.view());
-    }
-
-    public boolean isChemicalLocked(PlayerStages stages, ResourceLocation chemicalRegistryKey) {
-        return book.isChemicalLocked(chemicalRegistryKey, stages.view());
-    }
-
-    public boolean isRecipeLocked(PlayerStages stages, ResourceLocation recipeHolderId) {
-        return book.isRecipeLocked(recipeHolderId, stages.view());
-    }
-
-    public boolean isDimensionLocked(PlayerStages stages, ResourceLocation dimensionId) {
-        return book.isDimensionLocked(dimensionId, stages.view());
     }
 }

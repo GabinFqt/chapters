@@ -47,48 +47,6 @@ public final class ClientStageView {
             Map<ResourceLocation, Set<ResourceLocation>> nextItems,
             Map<ResourceLocation, Set<ResourceLocation>> nextFluids,
             Map<ResourceLocation, Set<ResourceLocation>> nextChemicals,
-            Map<ResourceLocation, Set<ResourceLocation>> nextRecipes
-    ) {
-        replaceIndices(
-                nextItems,
-                nextFluids,
-                nextChemicals,
-                nextRecipes,
-                nextItems,
-                nextFluids,
-                nextChemicals,
-                nextRecipes,
-                nextFluids,
-                nextChemicals);
-    }
-
-    public synchronized void replaceIndices(
-            Map<ResourceLocation, Set<ResourceLocation>> nextItems,
-            Map<ResourceLocation, Set<ResourceLocation>> nextFluids,
-            Map<ResourceLocation, Set<ResourceLocation>> nextChemicals,
-            Map<ResourceLocation, Set<ResourceLocation>> nextRecipes,
-            Map<ResourceLocation, Set<ResourceLocation>> nextItemJei,
-            Map<ResourceLocation, Set<ResourceLocation>> nextFluidJei,
-            Map<ResourceLocation, Set<ResourceLocation>> nextChemicalJei,
-            Map<ResourceLocation, Set<ResourceLocation>> nextRecipeJei
-    ) {
-        replaceIndices(
-                nextItems,
-                nextFluids,
-                nextChemicals,
-                nextRecipes,
-                nextItemJei,
-                nextFluidJei,
-                nextChemicalJei,
-                nextRecipeJei,
-                nextFluids,
-                nextChemicals);
-    }
-
-    public synchronized void replaceIndices(
-            Map<ResourceLocation, Set<ResourceLocation>> nextItems,
-            Map<ResourceLocation, Set<ResourceLocation>> nextFluids,
-            Map<ResourceLocation, Set<ResourceLocation>> nextChemicals,
             Map<ResourceLocation, Set<ResourceLocation>> nextRecipes,
             Map<ResourceLocation, Set<ResourceLocation>> nextItemJei,
             Map<ResourceLocation, Set<ResourceLocation>> nextFluidJei,
@@ -149,47 +107,32 @@ public final class ClientStageView {
         return chemicalTransfer;
     }
 
-    public synchronized Set<ResourceLocation> lockedFluidIds() {
-        return computeLocked(fluids, snapshotStages());
-    }
-
-    public synchronized Set<ResourceLocation> lockedChemicalIds() {
-        return computeLocked(chemicals, snapshotStages());
-    }
-
-    public synchronized Set<ResourceLocation> lockedRecipeIds() {
-        return computeLocked(recipes, snapshotStages());
+    /** Ids the recipe viewer hides for the current stages: one consistent snapshot of stages and indices. */
+    public record Hidden(
+            Set<ResourceLocation> items,
+            Set<ResourceLocation> fluids,
+            Set<ResourceLocation> chemicals,
+            Set<ResourceLocation> recipes) {
     }
 
     /**
-     * Locked item ids plus filled buckets whose fluid is locked.
+     * Content locked for the current stages whose locking stages enable {@code hideInJei}. Filled buckets follow
+     * their fluid, so {@code catalog} maps each hidden fluid to its bucket item.
      */
-    public synchronized Set<ResourceLocation> lockedItemIds(ContentCatalog catalog) {
-        Set<ResourceLocation> locked = computeLocked(items, snapshotStages());
-        Set<ResourceLocation> lockedFluids = computeLocked(fluids, snapshotStages());
+    public synchronized Hidden hidden(ContentCatalog catalog) {
+        Set<ResourceLocation> active = snapshotStages();
+        Set<ResourceLocation> hiddenFluids = computeFlagRestricted(fluids, fluidJei, active);
+        Set<ResourceLocation> hiddenItems = computeFlagRestricted(items, itemJei, active);
         if (catalog != null) {
-            for (ResourceLocation fluidId : lockedFluids) {
-                locked.addAll(catalog.bucketItemsForFluid(fluidId));
+            for (ResourceLocation fluidId : hiddenFluids) {
+                hiddenItems.addAll(catalog.bucketItemsForFluid(fluidId));
             }
         }
-        return locked;
-    }
-
-    public static Set<ResourceLocation> computeLocked(
-            Map<ResourceLocation, Set<ResourceLocation>> index,
-            Set<ResourceLocation> activeStages
-    ) {
-        Set<ResourceLocation> locked = new LinkedHashSet<>();
-        if (index == null || index.isEmpty()) {
-            return locked;
-        }
-        Set<ResourceLocation> owned = activeStages == null ? Set.of() : activeStages;
-        for (Map.Entry<ResourceLocation, Set<ResourceLocation>> entry : index.entrySet()) {
-            if (LockRules.isLocked(entry.getValue(), owned)) {
-                locked.add(entry.getKey());
-            }
-        }
-        return locked;
+        return new Hidden(
+                hiddenItems,
+                hiddenFluids,
+                computeFlagRestricted(chemicals, chemicalJei, active),
+                computeFlagRestricted(recipes, recipeJei, active));
     }
 
     /**
@@ -206,12 +149,9 @@ public final class ClientStageView {
             return restricted;
         }
         Set<ResourceLocation> owned = activeStages == null ? Set.of() : activeStages;
-        for (Map.Entry<ResourceLocation, Set<ResourceLocation>> entry : lockIndex.entrySet()) {
-            ResourceLocation id = entry.getKey();
-            if (!flagIndex.containsKey(id)) {
-                continue;
-            }
-            if (LockRules.isLocked(entry.getValue(), owned)) {
+        // The flag index only lists ids that are also in the lock index, and is usually the smaller one.
+        for (ResourceLocation id : flagIndex.keySet()) {
+            if (LockRules.isLocked(lockIndex.get(id), owned)) {
                 restricted.add(id);
             }
         }

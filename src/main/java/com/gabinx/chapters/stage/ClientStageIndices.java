@@ -1,47 +1,18 @@
 package com.gabinx.chapters.stage;
 
 import com.gabinx.chapters.logic.ClientStageView;
+import com.gabinx.chapters.logic.ContentCatalog;
 import net.minecraft.resources.ResourceLocation;
 
 import java.util.Map;
 import java.util.Set;
 
 /**
- * Server-authoritative snapshots of the four stage-locking indices, mirrored on the logical client.
+ * Server-authoritative snapshots of the stage-locking indices, mirrored on the logical client.
  * Delegates storage to a shared {@link ClientStageView} used also by {@link ClientStageCache}.
  */
 public final class ClientStageIndices {
     private ClientStageIndices() {
-    }
-
-    public static synchronized void replace(
-            Map<ResourceLocation, Set<ResourceLocation>> nextItems,
-            Map<ResourceLocation, Set<ResourceLocation>> nextFluids,
-            Map<ResourceLocation, Set<ResourceLocation>> nextChemicals,
-            Map<ResourceLocation, Set<ResourceLocation>> nextRecipes
-    ) {
-        ClientStageMirror.VIEW.replaceIndices(nextItems, nextFluids, nextChemicals, nextRecipes);
-    }
-
-    public static synchronized void replace(
-            Map<ResourceLocation, Set<ResourceLocation>> nextItems,
-            Map<ResourceLocation, Set<ResourceLocation>> nextFluids,
-            Map<ResourceLocation, Set<ResourceLocation>> nextChemicals,
-            Map<ResourceLocation, Set<ResourceLocation>> nextRecipes,
-            Map<ResourceLocation, Set<ResourceLocation>> nextItemJei,
-            Map<ResourceLocation, Set<ResourceLocation>> nextFluidJei,
-            Map<ResourceLocation, Set<ResourceLocation>> nextChemicalJei,
-            Map<ResourceLocation, Set<ResourceLocation>> nextRecipeJei
-    ) {
-        ClientStageMirror.VIEW.replaceIndices(
-                nextItems,
-                nextFluids,
-                nextChemicals,
-                nextRecipes,
-                nextItemJei,
-                nextFluidJei,
-                nextChemicalJei,
-                nextRecipeJei);
     }
 
     public static synchronized void replace(
@@ -67,6 +38,11 @@ public final class ClientStageIndices {
                 nextRecipeJei,
                 nextFluidTransfer,
                 nextChemicalTransfer);
+    }
+
+    /** What the recipe viewer hides for the mirrored stages; see {@link ClientStageView#hidden}. */
+    public static ClientStageView.Hidden hidden(ContentCatalog catalog) {
+        return ClientStageMirror.VIEW.hidden(catalog);
     }
 
     public static Map<ResourceLocation, Set<ResourceLocation>> itemsView() {

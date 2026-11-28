@@ -12,6 +12,7 @@ public final class E2eStages {
     public static final ResourceLocation LAVA_NO_TRANSFER = id("e2e_lava_no_transfer");
     public static final ResourceLocation WATER_TRANSFER = id("e2e_water_transfer");
     public static final ResourceLocation END_TRAVEL = id("e2e_end_travel");
+    public static final ResourceLocation END_TAG = id("e2e_end_tag");
     public static final ResourceLocation OR_A = id("e2e_or_a");
     public static final ResourceLocation OR_B = id("e2e_or_b");
     public static final ResourceLocation BIG = id("e2e_big");

@@ -6,6 +6,7 @@ import com.gabinx.chapters.e2e.E2ePlayers;
 import com.gabinx.chapters.e2e.E2eStages;
 import com.gabinx.chapters.e2e.E2eSupport;
 import com.gabinx.chapters.network.ClientboundStagesPayload;
+import com.gabinx.chapters.stage.StageManager;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
@@ -53,6 +54,26 @@ public class TravelGameTests {
         helper.assertTrue(player.level().dimension() == Level.END, "unlocked travel should reach the End");
         E2eSupport.revoke(player, E2eStages.END_TRAVEL);
         helper.assertTrue(player.level().dimension() == Level.OVERWORLD, "losing the stage should eject back to the Overworld");
+        helper.succeed();
+    }
+
+    /**
+     * A dimension tag in a datapack stage must lock from the first start. The first datapack load runs before the
+     * server and its levels exist, so the indices have to be rebuilt once they do.
+     */
+    @GameTest(template = "empty", batch = "chapters", timeoutTicks = 40)
+    public static void dimensionTag_locksFromFirstStart(GameTestHelper helper) {
+        E2eSupport.prepare(helper);
+        Set<ResourceLocation> endStages =
+                StageManager.get().dimensionStagesIndexView().getOrDefault(Level.END.location(), Set.of());
+        helper.assertTrue(endStages.contains(E2eStages.END_TAG), "the End should be locked through #chapters:e2e_end_tag");
+        ServerPlayer player = E2ePlayers.join(helper).player();
+        ServerLevel end = player.server.getLevel(Level.END);
+        E2eSupport.grant(player, E2eStages.END_TAG);
+        player.teleportTo(end, 0.5, 80, 0.5, 0, 0);
+        helper.assertTrue(player.level().dimension() == Level.END, "the tag stage alone should unlock the End");
+        E2eSupport.revoke(player, E2eStages.END_TAG);
+        helper.assertTrue(player.level().dimension() == Level.OVERWORLD, "losing it should eject back to the Overworld");
         helper.succeed();
     }
 

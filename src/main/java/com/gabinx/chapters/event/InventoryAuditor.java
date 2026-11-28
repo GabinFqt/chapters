@@ -1,11 +1,14 @@
 package com.gabinx.chapters.event;
 
+import com.gabinx.chapters.compat.ftb.EffectiveStages;
 import com.gabinx.chapters.logic.InventoryPlan;
-import com.gabinx.chapters.logic.Restriction;
+import com.gabinx.chapters.logic.StageBook;
 import com.gabinx.chapters.stage.LockResolver;
+import com.gabinx.chapters.stage.StageManager;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 
@@ -30,25 +33,28 @@ public final class InventoryAuditor {
     }
 
     public static void auditNow(ServerPlayer player) {
-        List<ResourceLocation> slotIds = new ArrayList<>(player.getInventory().getContainerSize());
-        for (int slot = 0; slot < player.getInventory().getContainerSize(); slot++) {
-            ItemStack stack = player.getInventory().getItem(slot);
-            if (stack.isEmpty()) {
-                slotIds.add(null);
-            } else {
-                slotIds.add(BuiltInRegistries.ITEM.getKey(stack.getItem()));
-            }
+        StageBook book = StageManager.get().book();
+        if (book.hasNoItemOrFluidLocks()) {
+            return;
         }
-        for (int slot : InventoryPlan.slotsToDrop(slotIds, itemId -> {
-            ItemStack probe = new ItemStack(BuiltInRegistries.ITEM.get(itemId));
-            return LockResolver.isRestricted(player, probe, Restriction.INVENTORY);
-        })) {
-            ItemStack stack = player.getInventory().getItem(slot);
+        Inventory inventory = player.getInventory();
+        List<ResourceLocation> slotIds = new ArrayList<>(inventory.getContainerSize());
+        for (int slot = 0; slot < inventory.getContainerSize(); slot++) {
+            ItemStack stack = inventory.getItem(slot);
+            slotIds.add(stack.isEmpty() ? null : BuiltInRegistries.ITEM.getKey(stack.getItem()));
+        }
+        List<Integer> toDrop = InventoryPlan.slotsToDrop(
+                slotIds,
+                book,
+                EffectiveStages.view(player),
+                itemId -> LockResolver.bucketFluidId(BuiltInRegistries.ITEM.get(itemId)));
+        for (int slot : toDrop) {
+            ItemStack stack = inventory.getItem(slot);
             if (stack.isEmpty()) {
                 continue;
             }
             ItemStack drop = stack.copy();
-            player.getInventory().setItem(slot, ItemStack.EMPTY);
+            inventory.setItem(slot, ItemStack.EMPTY);
             player.drop(drop, false);
         }
     }

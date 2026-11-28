@@ -61,7 +61,7 @@ Turn `preventPickup` off too if ground loot should be pickable.
 | `dropFromInventory` | Items, and filled buckets of a locked fluid | Dropped from the inventory, about once a second, and again when the stage is removed |
 | `preventCraft` | Items, recipe ids | The vanilla crafting grid will not produce it |
 | `hideInJei` | Items, fluids, chemicals, recipes | Hidden in JEI |
-| `preventTransfer` | Fluids, chemicals | The player cannot place, fill, or transfer it (buckets and tanks) |
+| `preventTransfer` | Fluids, chemicals | The player cannot place, fill, or transfer it (buckets, cauldrons, and tanks) |
 | `preventTravel` | Dimensions | Travel is cancelled, and a player already inside is sent back to the Overworld |
 
 Other machines and pipes: [[Limits]].

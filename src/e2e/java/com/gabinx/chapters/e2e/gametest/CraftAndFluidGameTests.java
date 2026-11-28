@@ -15,6 +15,10 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.LayeredCauldronBlock;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.level.material.Fluids;
 import net.neoforged.neoforge.fluids.FluidActionResult;
 import net.neoforged.neoforge.fluids.FluidStack;
@@ -163,6 +167,42 @@ public class CraftAndFluidGameTests {
     }
 
     /** The joined player stands at relative (2, 1, 2) looking +Z, so a source at (2, 2, 4) is at eye height. */
+    @GameTest(template = "empty", batch = "chapters", timeoutTicks = 40)
+    public static void waterCauldron_blockedUntilStage(GameTestHelper helper) {
+        E2eSupport.prepare(helper);
+        ServerPlayer player = E2ePlayers.join(helper, false).player();
+        BlockPos cauldron = new BlockPos(2, 2, 3);
+        BlockState full = Blocks.WATER_CAULDRON.defaultBlockState().setValue(LayeredCauldronBlock.LEVEL, 3);
+
+        helper.setBlock(cauldron, full);
+        helper.assertFalse(useOnBlock(helper, player, Items.BUCKET, cauldron).consumesAction(),
+                "an empty bucket should not take locked water from a cauldron");
+        helper.assertTrue(helper.getBlockState(cauldron).is(Blocks.WATER_CAULDRON), "the cauldron should keep its water");
+        helper.assertTrue(player.getMainHandItem().is(Items.BUCKET), "the bucket should stay empty");
+
+        helper.setBlock(cauldron, Blocks.CAULDRON.defaultBlockState());
+        helper.assertFalse(useOnBlock(helper, player, Items.WATER_BUCKET, cauldron).consumesAction(),
+                "a water bucket should not empty locked water into a cauldron");
+        helper.assertTrue(helper.getBlockState(cauldron).is(Blocks.CAULDRON), "the cauldron should stay empty");
+
+        E2eSupport.grant(player, E2eStages.WATER_TRANSFER);
+        helper.assertTrue(useOnBlock(helper, player, Items.WATER_BUCKET, cauldron).consumesAction(),
+                "an unlocked water bucket should fill the cauldron");
+        helper.assertTrue(helper.getBlockState(cauldron).is(Blocks.WATER_CAULDRON), "the cauldron should now hold water");
+        helper.assertTrue(useOnBlock(helper, player, Items.BUCKET, cauldron).consumesAction(),
+                "an unlocked bucket should take the water back");
+        helper.assertTrue(player.getMainHandItem().is(Items.WATER_BUCKET), "the bucket should now be full");
+        helper.succeed();
+    }
+
+    private static InteractionResult useOnBlock(GameTestHelper helper, ServerPlayer player, Item item, BlockPos relative) {
+        player.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(item));
+        BlockPos pos = helper.absolutePos(relative);
+        BlockHitResult hit = new BlockHitResult(Vec3.atCenterOf(pos), Direction.UP, pos, false);
+        return player.gameMode.useItemOn(
+                player, helper.getLevel(), player.getMainHandItem(), InteractionHand.MAIN_HAND, hit);
+    }
+
     private static InteractionResultHolder<ItemStack> useBucket(ServerPlayer player, Item item) {
         player.setYRot(0.0F);
         player.setXRot(0.0F);

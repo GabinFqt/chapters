@@ -5,13 +5,10 @@ import com.gabinx.chapters.compat.jei.ChaptersJeiPlugin;
 import com.gabinx.chapters.logic.ClientRefreshCoalescer;
 import com.gabinx.chapters.logic.ClientStageView;
 import com.gabinx.chapters.logic.RegistryContentCatalog;
-import com.gabinx.chapters.stage.ClientStageCache;
 import com.gabinx.chapters.stage.ClientStageIndices;
-import net.minecraft.resources.ResourceLocation;
 import net.neoforged.fml.ModList;
 
 import java.util.LinkedHashSet;
-import java.util.Set;
 
 public final class RecipeViewerCompat {
     private static final ClientRefreshCoalescer COALESCER = new ClientRefreshCoalescer(RecipeViewerCompat::applyNow);
@@ -30,33 +27,23 @@ public final class RecipeViewerCompat {
     }
 
     private static void applyNow() {
-        Set<ResourceLocation> active = ClientStageCache.snapshot();
-        Set<ResourceLocation> lockedFluids = ClientStageView.computeFlagRestricted(
-                ClientStageIndices.fluidsView(), ClientStageIndices.fluidJeiView(), active);
-        Set<ResourceLocation> lockedItems = ClientStageView.computeFlagRestricted(
-                ClientStageIndices.itemsView(), ClientStageIndices.itemJeiView(), active);
-        for (ResourceLocation fluidId : lockedFluids) {
-            lockedItems.addAll(RegistryContentCatalog.INSTANCE.bucketItemsForFluid(fluidId));
+        if (!ModList.get().isLoaded("jei")) {
+            return;
         }
-        Set<ResourceLocation> lockedChemicals = ClientStageView.computeFlagRestricted(
-                ClientStageIndices.chemicalsView(), ClientStageIndices.chemicalJeiView(), active);
-        Set<ResourceLocation> lockedRecipes = ClientStageView.computeFlagRestricted(
-                ClientStageIndices.recipesView(), ClientStageIndices.recipeJeiView(), active);
+        ClientStageView.Hidden hidden = ClientStageIndices.hidden(RegistryContentCatalog.INSTANCE);
         long started = System.nanoTime();
-        if (ModList.get().isLoaded("jei")) {
-            ChaptersJeiPlugin.onLockedIngredientsChanged(
-                    new LinkedHashSet<>(lockedItems),
-                    lockedFluids,
-                    lockedChemicals,
-                    lockedRecipes
-            );
-        }
+        ChaptersJeiPlugin.onLockedIngredientsChanged(
+                new LinkedHashSet<>(hidden.items()),
+                hidden.fluids(),
+                hidden.chemicals(),
+                hidden.recipes()
+        );
         Chapters.LOGGER.debug(
                 "Recipe viewer refresh: locked items: {}, locked fluids: {}, locked chemicals: {}, locked recipes: {}, {} ms",
-                lockedItems.size(),
-                lockedFluids.size(),
-                lockedChemicals.size(),
-                lockedRecipes.size(),
+                hidden.items().size(),
+                hidden.fluids().size(),
+                hidden.chemicals().size(),
+                hidden.recipes().size(),
                 (System.nanoTime() - started) / 1_000_000L
         );
     }

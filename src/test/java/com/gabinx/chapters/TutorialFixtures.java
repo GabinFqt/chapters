@@ -41,6 +41,34 @@ public final class TutorialFixtures {
     private TutorialFixtures() {
     }
 
+    /** Fluid held by a filled bucket in the tutorial catalog, the way {@code LockResolver.bucketFluidId} answers it. */
+    public static ResourceLocation bucketFluid(ResourceLocation itemId) {
+        if (WATER_BUCKET.equals(itemId)) {
+            return WATER;
+        }
+        if (LAVA_BUCKET.equals(itemId)) {
+            return LAVA;
+        }
+        return null;
+    }
+
+    /** A client mirror holding every index the server would send for {@code book}. */
+    public static com.gabinx.chapters.logic.ClientStageView mirror(StageBook book) {
+        var view = new com.gabinx.chapters.logic.ClientStageView();
+        view.replaceIndices(
+                book.itemStagesIndexView(),
+                book.fluidStagesIndexView(),
+                book.chemicalStagesIndexView(),
+                book.recipeStagesIndexView(),
+                book.itemJeiStagesIndexView(),
+                book.fluidJeiStagesIndexView(),
+                book.chemicalJeiStagesIndexView(),
+                book.recipeJeiStagesIndexView(),
+                book.fluidTransferStagesIndexView(),
+                book.chemicalTransferStagesIndexView());
+        return view;
+    }
+
     public static ResourceLocation id(String value) {
         return ResourceLocation.parse(value);
     }

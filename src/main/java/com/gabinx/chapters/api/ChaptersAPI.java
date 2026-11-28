@@ -51,8 +51,16 @@ public final class ChaptersAPI {
     }
 
     public static void syncAll(ServerPlayer player) {
-        PacketDistributor.sendToPlayer(player, new ClientboundStagesPayload(getStages(player)));
+        syncStages(player);
         syncStageIndicesToPlayer(player);
+    }
+
+    /**
+     * Sends only the player's full stage set. Use when stages changed but the lock indices did not (team stage
+     * change, party join or leave): the index payload can be large and the client already has it.
+     */
+    public static void syncStages(ServerPlayer player) {
+        PacketDistributor.sendToPlayer(player, new ClientboundStagesPayload(getStages(player)));
     }
 
     /**

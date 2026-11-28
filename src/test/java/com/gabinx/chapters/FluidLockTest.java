@@ -2,6 +2,7 @@ package com.gabinx.chapters;
 
 import com.gabinx.chapters.logic.ClientStageView;
 import com.gabinx.chapters.logic.StageBook;
+import com.gabinx.chapters.logic.Restriction;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -38,26 +39,22 @@ class FluidLockTest {
 
     @Test
     void bucketsCountAsLockedItemsInViewer() {
-        ClientStageView view = new ClientStageView();
-        view.replaceIndices(
-                book.itemStagesIndexView(),
-                book.fluidStagesIndexView(),
-                book.chemicalStagesIndexView(),
-                book.recipeStagesIndexView()
-        );
-        Set<?> lockedItems = view.lockedItemIds(book.catalog());
+        ClientStageView view = TutorialFixtures.mirror(book);
+        Set<?> lockedItems = view.hidden(book.catalog()).items();
         assertTrue(lockedItems.contains(WATER_BUCKET));
         assertTrue(lockedItems.contains(LAVA_BUCKET));
 
         view.addStage(FLUIDES_BASE);
-        lockedItems = view.lockedItemIds(book.catalog());
+        lockedItems = view.hidden(book.catalog()).items();
         assertFalse(lockedItems.contains(WATER_BUCKET));
         assertFalse(lockedItems.contains(LAVA_BUCKET));
     }
 
     @Test
     void filledBucketGatingViaBook() {
-        assertTrue(book.isItemOrFluidBucketLocked(WATER_BUCKET, Set.of()));
-        assertFalse(book.isItemOrFluidBucketLocked(WATER_BUCKET, Set.of(FLUIDES_BASE)));
+        assertTrue(book.isItemOrFluidBucketRestricted(WATER_BUCKET, WATER, Set.of(), Restriction.INVENTORY));
+        assertFalse(book.isItemOrFluidBucketRestricted(WATER_BUCKET, WATER, Set.of(FLUIDES_BASE), Restriction.INVENTORY));
+        assertFalse(book.isItemOrFluidBucketRestricted(WATER_BUCKET, null, Set.of(), Restriction.INVENTORY),
+                "the bucket item itself is not listed, only its fluid");
     }
 }

@@ -6,6 +6,7 @@ import com.gabinx.chapters.compat.RecipeViewerBootstrap;
 import com.gabinx.chapters.compat.RecipeViewerClientHooks;
 import com.gabinx.chapters.compat.ftb.FtbCompat;
 import com.gabinx.chapters.compat.kubejs.ChaptersKubeJSBridge;
+import com.gabinx.chapters.event.CauldronHandler;
 import com.gabinx.chapters.event.CraftingHandler;
 import com.gabinx.chapters.event.DimensionHandler;
 import com.gabinx.chapters.event.InventoryAuditor;
@@ -34,6 +35,8 @@ public final class Chapters {
 
         NeoForge.EVENT_BUS.addListener(this::onRegisterCommands);
         NeoForge.EVENT_BUS.addListener(this::onAddReloadListener);
+        NeoForge.EVENT_BUS.addListener(StageManager.get()::onServerStarted);
+        NeoForge.EVENT_BUS.addListener(CauldronHandler::onUseOnBlock);
         NeoForge.EVENT_BUS.addListener(PickupHandler::onPickup);
         NeoForge.EVENT_BUS.addListener(CraftingHandler::onCrafted);
         NeoForge.EVENT_BUS.addListener(InventoryAuditor::onTick);

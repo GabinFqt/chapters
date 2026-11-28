@@ -22,7 +22,6 @@ import static com.gabinx.chapters.TutorialFixtures.NETHERITE_INGOT;
 import static com.gabinx.chapters.TutorialFixtures.id;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ChaptersCommandTest {
@@ -36,33 +35,17 @@ class ChaptersCommandTest {
     }
 
     @Test
-    void addCheckListRemoveCycle() {
-        assertInstanceOf(
-                StageCommandActions.Outcome.Success.class,
-                StageCommandActions.add(stages, book.stageIds(), INTRO_NETHER)
-        );
-        assertTrue(StageCommandActions.check(stages, INTRO_NETHER));
-        assertTrue(StageCommandActions.list(stages).contains(INTRO_NETHER));
-
-        assertInstanceOf(
-                StageCommandActions.Outcome.Success.class,
-                StageCommandActions.remove(stages, book.stageIds(), INTRO_NETHER)
-        );
-        assertFalse(StageCommandActions.check(stages, INTRO_NETHER));
-        assertFalse(StageCommandActions.list(stages).contains(INTRO_NETHER));
+    void addAcceptsOnlyDefinedStages() {
+        assertTrue(StageCommandActions.canAdd(book.stageIds(), INTRO_NETHER));
+        assertFalse(StageCommandActions.canAdd(book.stageIds(), id("foo:bar")));
     }
 
     @Test
-    void unknownStageRejected() {
-        ResourceLocation unknown = id("foo:bar");
-        assertInstanceOf(
-                StageCommandActions.Outcome.UnknownStage.class,
-                StageCommandActions.requireKnown(book.stageIds(), unknown)
-        );
-        assertInstanceOf(
-                StageCommandActions.Outcome.UnknownStage.class,
-                StageCommandActions.add(stages, book.stageIds(), unknown)
-        );
+    void removeAcceptsAStageThePlayerKeptAfterItWasDeleted() {
+        ResourceLocation deleted = id("tutorial:deleted_stage");
+        assertFalse(StageCommandActions.canRemove(book.stageIds(), Set.of(), deleted), "unknown and not owned");
+        assertTrue(StageCommandActions.canRemove(book.stageIds(), Set.of(deleted), deleted), "still owned");
+        assertTrue(StageCommandActions.canRemove(book.stageIds(), Set.of(), INTRO_NETHER), "defined");
     }
 
     @Test
@@ -82,18 +65,19 @@ class ChaptersCommandTest {
     @Test
     void craftGateMatchesCommandLockedState() {
         assertTrue(CraftGate.shouldBlock(book.isItemLocked(NETHERITE_INGOT, stages.view()), false));
-        StageCommandActions.add(stages, book.stageIds(), INTRO_NETHER);
+        stages.add(INTRO_NETHER);
         assertFalse(CraftGate.shouldBlock(book.isItemLocked(NETHERITE_INGOT, stages.view()), false));
     }
 
     @Test
     void removePlansInventoryDrop() {
-        StageCommandActions.add(stages, book.stageIds(), INTRO_NETHER);
-        StageCommandActions.remove(stages, book.stageIds(), INTRO_NETHER);
+        stages.add(INTRO_NETHER);
+        stages.remove(INTRO_NETHER);
         List<Integer> slots = InventoryPlan.slotsToDrop(
                 java.util.Arrays.asList(NETHERITE_INGOT, null, id("minecraft:stick")),
                 book,
-                stages.view()
+                stages.view(),
+                TutorialFixtures::bucketFluid
         );
         assertEquals(List.of(0), slots);
     }

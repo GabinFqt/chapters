@@ -8,47 +8,47 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.BucketItem;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.material.Fluid;
 import net.minecraft.world.level.material.Fluids;
 import net.neoforged.neoforge.fluids.FluidStack;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.Set;
 
+/**
+ * Server-side lock checks for a player, reading {@link EffectiveStages} and the live {@link StageManager} book.
+ */
 public final class LockResolver {
     private LockResolver() {
     }
 
-    /** True if the stack is gated by any stage (flags ignored). */
-    public static boolean isLocked(ServerPlayer player, ItemStack stack) {
-        if (stack.isEmpty()) {
-            return false;
-        }
-        Identifier itemId = BuiltInRegistries.ITEM.getKey(stack.getItem());
-        if (StageManager.get().book().isItemLocked(itemId, EffectiveStages.view(player))) {
-            return true;
-        }
-        return isFluidBucketLocked(player, stack);
-    }
-
+    /** Item restriction, counting a filled bucket as restricted while its fluid is. */
     public static boolean isRestricted(ServerPlayer player, ItemStack stack, Restriction restriction) {
         if (stack.isEmpty() || restriction == null) {
             return false;
         }
-        Identifier itemId = BuiltInRegistries.ITEM.getKey(stack.getItem());
-        Set<Identifier> owned = EffectiveStages.view(player);
-        if (StageManager.get().book().isItemRestricted(itemId, owned, restriction)) {
-            return true;
-        }
-        return isFluidBucketRestricted(player, stack, restriction);
+        return isItemRestricted(stack.getItem(), EffectiveStages.view(player), restriction);
     }
 
-    public static boolean isFluidLocked(ServerPlayer player, FluidStack stack) {
-        if (stack == null || stack.isEmpty()) {
-            return false;
+    /** Same rule as {@link #isRestricted(ServerPlayer, ItemStack, Restriction)} with the player's stages already read. */
+    public static boolean isItemRestricted(Item item, Set<Identifier> owned, Restriction restriction) {
+        return StageManager.get().book().isItemOrFluidBucketRestricted(
+                BuiltInRegistries.ITEM.getKey(item), bucketFluidId(item), owned, restriction);
+    }
+
+    /** Fluid kind held by a filled bucket item, else {@code null}. */
+    @Nullable
+    public static Identifier bucketFluidId(Item item) {
+        if (!(item instanceof BucketItem bucket)) {
+            return null;
         }
-        Identifier kind = StageDefinition.fluidKindRegistryKey(stack.getFluid());
-        return StageManager.get().book().isFluidLocked(kind, EffectiveStages.view(player));
+        Fluid filled = bucket.content;
+        if (filled == null || filled == Fluids.EMPTY) {
+            return null;
+        }
+        return StageDefinition.fluidKindRegistryKey(filled);
     }
 
     public static boolean isFluidRestricted(ServerPlayer player, FluidStack stack, Restriction restriction) {
@@ -60,8 +60,9 @@ public final class LockResolver {
     }
 
     /**
-     * Server uses {@link EffectiveStages} + {@link StageManager}; client prediction uses the mirrored
-     * {@link ClientStageIndices} / {@link ClientStageCache} so empty-bucket fill does not visually succeed.
+     * Whether {@code player} may not move {@code fluid} in or out of a container ({@code preventTransfer}). The server
+     * reads {@link EffectiveStages}; the client predicts from the mirrored {@link ClientStageIndices} /
+     * {@link ClientStageCache} so a blocked bucket use does not visually succeed.
      */
     public static boolean isFluidLocked(Player player, Fluid fluid) {
         if (player == null || fluid == null || fluid == Fluids.EMPTY) {
@@ -80,29 +81,6 @@ public final class LockResolver {
         return false;
     }
 
-    public static boolean isFluidBucketLocked(ServerPlayer player, ItemStack stack) {
-        if (stack.isEmpty() || !(stack.getItem() instanceof BucketItem bucket)) {
-            return false;
-        }
-        Fluid filled = bucket.content;
-        if (filled == null || filled == Fluids.EMPTY) {
-            return false;
-        }
-        return isFluidLocked(player, filled);
-    }
-
-    public static boolean isFluidBucketRestricted(
-            ServerPlayer player, ItemStack stack, Restriction restriction) {
-        if (stack.isEmpty() || !(stack.getItem() instanceof BucketItem bucket) || restriction == null) {
-            return false;
-        }
-        Fluid filled = bucket.content;
-        if (filled == null || filled == Fluids.EMPTY) {
-            return false;
-        }
-        return isFluidRestricted(player, new FluidStack(filled, 1000), restriction);
-    }
-
     private static boolean isFluidLockedClient(FluidStack stack) {
         Identifier kind = StageDefinition.fluidKindRegistryKey(stack.getFluid());
         if (kind == null) {
@@ -115,13 +93,6 @@ public final class LockResolver {
         return ClientStageIndices.fluidTransferView().containsKey(kind);
     }
 
-    public static boolean isChemicalLocked(ServerPlayer player, Identifier chemicalRegistryKey) {
-        if (chemicalRegistryKey == null) {
-            return false;
-        }
-        return StageManager.get().book().isChemicalLocked(chemicalRegistryKey, EffectiveStages.view(player));
-    }
-
     public static boolean isChemicalRestricted(
             ServerPlayer player, Identifier chemicalRegistryKey, Restriction restriction) {
         if (chemicalRegistryKey == null || restriction == null) {
@@ -132,13 +103,6 @@ public final class LockResolver {
                 .isChemicalRestricted(chemicalRegistryKey, EffectiveStages.view(player), restriction);
     }
 
-    public static boolean isRecipeLocked(ServerPlayer player, Identifier recipeHolderId) {
-        if (recipeHolderId == null) {
-            return false;
-        }
-        return StageManager.get().book().isRecipeLocked(recipeHolderId, EffectiveStages.view(player));
-    }
-
     public static boolean isRecipeRestricted(
             ServerPlayer player, Identifier recipeHolderId, Restriction restriction) {
         if (recipeHolderId == null || restriction == null) {
@@ -147,13 +111,6 @@ public final class LockResolver {
         return StageManager.get()
                 .book()
                 .isRecipeRestricted(recipeHolderId, EffectiveStages.view(player), restriction);
-    }
-
-    public static boolean isDimensionLocked(ServerPlayer player, Identifier dimensionId) {
-        if (dimensionId == null) {
-            return false;
-        }
-        return StageManager.get().book().isDimensionLocked(dimensionId, EffectiveStages.view(player));
     }
 
     public static boolean isDimensionRestricted(

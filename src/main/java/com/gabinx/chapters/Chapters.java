@@ -37,6 +37,7 @@ public final class Chapters {
 
         NeoForge.EVENT_BUS.addListener(this::onRegisterCommands);
         NeoForge.EVENT_BUS.addListener(this::onAddReloadListener);
+        NeoForge.EVENT_BUS.addListener(StageManager.get()::onServerStarted);
         NeoForge.EVENT_BUS.addListener(PickupHandler::onPickup);
         NeoForge.EVENT_BUS.addListener(CraftingHandler::onCrafted);
         NeoForge.EVENT_BUS.addListener(InventoryAuditor::onTick);

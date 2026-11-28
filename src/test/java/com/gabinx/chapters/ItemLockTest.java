@@ -59,7 +59,8 @@ class ItemLockTest {
         List<Integer> slots = InventoryPlan.slotsToDrop(
                 List.of(NETHERITE_INGOT, id("minecraft:stick"), NETHERITE_INGOT),
                 book,
-                Set.of()
+                Set.of(),
+                TutorialFixtures::bucketFluid
         );
         assertEquals(List.of(0, 2), slots);
     }

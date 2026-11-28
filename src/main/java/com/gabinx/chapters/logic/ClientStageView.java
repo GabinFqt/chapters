@@ -47,48 +47,6 @@ public final class ClientStageView {
             Map<Identifier, Set<Identifier>> nextItems,
             Map<Identifier, Set<Identifier>> nextFluids,
             Map<Identifier, Set<Identifier>> nextChemicals,
-            Map<Identifier, Set<Identifier>> nextRecipes
-    ) {
-        replaceIndices(
-                nextItems,
-                nextFluids,
-                nextChemicals,
-                nextRecipes,
-                nextItems,
-                nextFluids,
-                nextChemicals,
-                nextRecipes,
-                nextFluids,
-                nextChemicals);
-    }
-
-    public synchronized void replaceIndices(
-            Map<Identifier, Set<Identifier>> nextItems,
-            Map<Identifier, Set<Identifier>> nextFluids,
-            Map<Identifier, Set<Identifier>> nextChemicals,
-            Map<Identifier, Set<Identifier>> nextRecipes,
-            Map<Identifier, Set<Identifier>> nextItemJei,
-            Map<Identifier, Set<Identifier>> nextFluidJei,
-            Map<Identifier, Set<Identifier>> nextChemicalJei,
-            Map<Identifier, Set<Identifier>> nextRecipeJei
-    ) {
-        replaceIndices(
-                nextItems,
-                nextFluids,
-                nextChemicals,
-                nextRecipes,
-                nextItemJei,
-                nextFluidJei,
-                nextChemicalJei,
-                nextRecipeJei,
-                nextFluids,
-                nextChemicals);
-    }
-
-    public synchronized void replaceIndices(
-            Map<Identifier, Set<Identifier>> nextItems,
-            Map<Identifier, Set<Identifier>> nextFluids,
-            Map<Identifier, Set<Identifier>> nextChemicals,
             Map<Identifier, Set<Identifier>> nextRecipes,
             Map<Identifier, Set<Identifier>> nextItemJei,
             Map<Identifier, Set<Identifier>> nextFluidJei,
@@ -149,47 +107,32 @@ public final class ClientStageView {
         return chemicalTransfer;
     }
 
-    public synchronized Set<Identifier> lockedFluidIds() {
-        return computeLocked(fluids, snapshotStages());
-    }
-
-    public synchronized Set<Identifier> lockedChemicalIds() {
-        return computeLocked(chemicals, snapshotStages());
-    }
-
-    public synchronized Set<Identifier> lockedRecipeIds() {
-        return computeLocked(recipes, snapshotStages());
+    /** Ids the recipe viewer hides for the current stages: one consistent snapshot of stages and indices. */
+    public record Hidden(
+            Set<Identifier> items,
+            Set<Identifier> fluids,
+            Set<Identifier> chemicals,
+            Set<Identifier> recipes) {
     }
 
     /**
-     * Locked item ids plus filled buckets whose fluid is locked.
+     * Content locked for the current stages whose locking stages enable {@code hideInJei}. Filled buckets follow
+     * their fluid, so {@code catalog} maps each hidden fluid to its bucket item.
      */
-    public synchronized Set<Identifier> lockedItemIds(ContentCatalog catalog) {
-        Set<Identifier> locked = computeLocked(items, snapshotStages());
-        Set<Identifier> lockedFluids = computeLocked(fluids, snapshotStages());
+    public synchronized Hidden hidden(ContentCatalog catalog) {
+        Set<Identifier> active = snapshotStages();
+        Set<Identifier> hiddenFluids = computeFlagRestricted(fluids, fluidJei, active);
+        Set<Identifier> hiddenItems = computeFlagRestricted(items, itemJei, active);
         if (catalog != null) {
-            for (Identifier fluidId : lockedFluids) {
-                locked.addAll(catalog.bucketItemsForFluid(fluidId));
+            for (Identifier fluidId : hiddenFluids) {
+                hiddenItems.addAll(catalog.bucketItemsForFluid(fluidId));
             }
         }
-        return locked;
-    }
-
-    public static Set<Identifier> computeLocked(
-            Map<Identifier, Set<Identifier>> index,
-            Set<Identifier> activeStages
-    ) {
-        Set<Identifier> locked = new LinkedHashSet<>();
-        if (index == null || index.isEmpty()) {
-            return locked;
-        }
-        Set<Identifier> owned = activeStages == null ? Set.of() : activeStages;
-        for (Map.Entry<Identifier, Set<Identifier>> entry : index.entrySet()) {
-            if (LockRules.isLocked(entry.getValue(), owned)) {
-                locked.add(entry.getKey());
-            }
-        }
-        return locked;
+        return new Hidden(
+                hiddenItems,
+                hiddenFluids,
+                computeFlagRestricted(chemicals, chemicalJei, active),
+                computeFlagRestricted(recipes, recipeJei, active));
     }
 
     /**
@@ -206,12 +149,9 @@ public final class ClientStageView {
             return restricted;
         }
         Set<Identifier> owned = activeStages == null ? Set.of() : activeStages;
-        for (Map.Entry<Identifier, Set<Identifier>> entry : lockIndex.entrySet()) {
-            Identifier id = entry.getKey();
-            if (!flagIndex.containsKey(id)) {
-                continue;
-            }
-            if (LockRules.isLocked(entry.getValue(), owned)) {
+        // The flag index only lists ids that are also in the lock index, and is usually the smaller one.
+        for (Identifier id : flagIndex.keySet()) {
+            if (LockRules.isLocked(lockIndex.get(id), owned)) {
                 restricted.add(id);
             }
         }

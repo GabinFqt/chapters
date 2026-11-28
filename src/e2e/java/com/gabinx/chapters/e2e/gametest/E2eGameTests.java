@@ -59,6 +59,7 @@ public final class E2eGameTests {
         instance(event, normal, "water_transfer", 80, CraftAndFluidGameTests::water_transferBlockedUntilStage);
         instance(event, normal, "vanilla_water", 40, CraftAndFluidGameTests::vanillaWater_blockedUntilStage);
         instance(event, normal, "vanilla_lava", 40, CraftAndFluidGameTests::vanillaLava_placeAndPickupAllowed);
+        instance(event, normal, "water_cauldron", 40, CraftAndFluidGameTests::waterCauldron_blockedUntilStage);
         instance(event, normal, "craft_pickup", 40, CraftGameTests::lockedResult_pickupClearsCursor);
         instance(event, normal, "craft_quick_move", 40, CraftGameTests::lockedResult_quickMoveDoesNotEnterInventory);
         instance(event, normal, "craft_inventory_grid", 40, CraftGameTests::inventoryGrid_hidesLockedPlanks);

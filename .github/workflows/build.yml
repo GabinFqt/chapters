@@ -24,7 +24,7 @@ jobs:
     timeout-minutes: 25
     env:
       # Exact count, so a test that silently stops registering fails CI. Bump it with every GameTest you add or remove.
-      EXPECTED_GAMETESTS: "27"
+      EXPECTED_GAMETESTS: "28"
     steps:
       - uses: actions/checkout@v5
 

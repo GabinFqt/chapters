@@ -12,54 +12,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+/** Rules the FTB Teams listeners apply; the listeners themselves run in {@code TeamGameTests}. */
 class StageAccountsTest {
-    @Test
-    void aliceAndBobIsolatedWithoutTeam() {
-        StageAccounts accounts = new StageAccounts();
-        accounts.add("alice", INTRO_NETHER);
-        assertTrue(accounts.has("alice", INTRO_NETHER));
-        assertFalse(accounts.has("bob", INTRO_NETHER));
-        assertTrue(accounts.shouldEmitPerPlayerDelta("alice"));
-    }
-
-    @Test
-    void partySharesUnlocks() {
-        StageAccounts accounts = new StageAccounts();
-        accounts.ensurePersonalTeam("alice", "alice-personal");
-        accounts.ensurePersonalTeam("bob", "bob-personal");
-        accounts.createParty("party");
-        accounts.joinParty("alice", "party", "alice-personal");
-        accounts.joinParty("bob", "party", "bob-personal");
-
-        accounts.add("alice", INTRO_NETHER);
-        assertTrue(accounts.has("bob", INTRO_NETHER));
-        assertFalse(accounts.shouldEmitPerPlayerDelta("alice"));
-    }
-
-    @Test
-    void leaveCopiesPartyOntoPersonal() {
-        StageAccounts accounts = new StageAccounts();
-        accounts.ensurePersonalTeam("bob", "bob-personal");
-        accounts.createParty("party");
-        accounts.joinParty("bob", "party", "bob-personal");
-        accounts.add("bob", INTRO_NETHER);
-
-        accounts.leaveParty("bob", "party", "bob-personal");
-        assertTrue(accounts.has("bob", INTRO_NETHER));
-        assertEquals(Set.of(INTRO_NETHER), accounts.of("bob"));
-    }
-
-    @Test
-    void migrateLegacyOntoPersonalNotParty() {
-        StageAccounts accounts = new StageAccounts();
-        Set<Identifier> legacy = Set.of(INTRO_NETHER, RECIPE_PICKAXE);
-
-        assertEquals(0, accounts.migrateLegacy("alice", "party", true, legacy));
-        assertEquals(2, accounts.migrateLegacy("alice", "alice-personal", false, legacy));
-        assertTrue(accounts.has("alice", INTRO_NETHER));
-        assertTrue(accounts.has("alice", RECIPE_PICKAXE));
-    }
-
     @Test
     void mergeOnJoinUnionsAllSources() {
         Set<Identifier> merged = StageAccounts.mergeOnPartyJoin(
@@ -68,5 +22,26 @@ class StageAccountsTest {
                 Set.of(INTRO_NETHER)
         );
         assertEquals(Set.of(INTRO_NETHER, RECIPE_PICKAXE), merged);
+    }
+
+    @Test
+    void mergeOnJoinToleratesMissingSources() {
+        assertEquals(Set.of(INTRO_NETHER), StageAccounts.mergeOnPartyJoin(null, Set.of(INTRO_NETHER), null));
+    }
+
+    @Test
+    void leaveKeepsACopyOfThePartyStages() {
+        Set<Identifier> party = new java.util.LinkedHashSet<>(Set.of(INTRO_NETHER));
+        Set<Identifier> copy = StageAccounts.stagesAfterPartyLeave(party);
+        party.add(RECIPE_PICKAXE);
+        assertEquals(Set.of(INTRO_NETHER), copy, "later party changes must not reach the copy");
+        assertEquals(Set.of(), StageAccounts.stagesAfterPartyLeave(null));
+    }
+
+    @Test
+    void migrateLegacyOnlyOntoAPersonalTeamWithStages() {
+        assertTrue(StageAccounts.shouldMigrateLegacy(false, false));
+        assertFalse(StageAccounts.shouldMigrateLegacy(true, false), "never leak personal stages into a party");
+        assertFalse(StageAccounts.shouldMigrateLegacy(false, true), "nothing to migrate");
     }
 }

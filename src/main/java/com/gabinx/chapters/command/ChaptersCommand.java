@@ -38,7 +38,7 @@ public final class ChaptersCommand {
                                         .executes(ctx -> {
                                             ServerPlayer player = EntityArgument.getPlayer(ctx, "player");
                                             Identifier stage = IdentifierArgument.getId(ctx, "stage");
-                                            requireKnownStage(stage);
+                                            requireStage(StageCommandActions.canAdd(StageManager.get().stageIds(), stage), stage);
                                             ChaptersAPI.addStage(player, stage);
                                             ctx.getSource().sendSuccess(
                                                     () -> Component.translatable("commands.chapters.add.success", stage.toString(), player.getGameProfile().name()),
@@ -53,7 +53,7 @@ public final class ChaptersCommand {
                                         .executes(ctx -> {
                                             ServerPlayer player = EntityArgument.getPlayer(ctx, "player");
                                             Identifier stage = IdentifierArgument.getId(ctx, "stage");
-                                            requireKnownStage(stage);
+                                            requireStage(StageCommandActions.canRemove(StageManager.get().stageIds(), ChaptersAPI.getStages(player), stage), stage);
                                             ChaptersAPI.removeStage(player, stage);
                                             ctx.getSource().sendSuccess(
                                                     () -> Component.translatable("commands.chapters.remove.success", stage.toString(), player.getGameProfile().name()),
@@ -104,12 +104,8 @@ public final class ChaptersCommand {
                         })));
     }
 
-    /**
-     * Validates against the same rules as {@link StageCommandActions} (unknown stage → error).
-     */
-    private static void requireKnownStage(Identifier stage) throws CommandSyntaxException {
-        StageCommandActions.Outcome outcome = StageCommandActions.requireKnown(StageManager.get().stageIds(), stage);
-        if (outcome instanceof StageCommandActions.Outcome.UnknownStage) {
+    private static void requireStage(boolean accepted, Identifier stage) throws CommandSyntaxException {
+        if (!accepted) {
             throw new SimpleCommandExceptionType(
                     Component.translatable("commands.chapters.error.unknown_stage", stage.toString())
             ).create();

@@ -9,6 +9,7 @@ Chapters blocks locked recipe ids and craft-locked items on the **vanilla crafti
 These still craft:
 
 - Smithing tables
+- The vanilla Crafter block (it crafts without a player)
 - Create mechanical crafters and other mod crafters
 - Furnaces, machines, and anything that is not that vanilla grid
 
@@ -54,6 +55,8 @@ A player who is already inside is sent to the **Overworld spawn** on login, on r
 If the Overworld is locked for them too, they are **not** moved. That avoids a loop. Unlock the Overworld, or do not lock it, if you still want the eject.
 
 An item `@mod` line does not lock dimensions. Use `dimension:`.
+
+On **26**, prefer dimension ids over dimension tags for vanilla dimensions. Minecraft 26 reads dimension tags before the world has created its dimensions: a tag entry such as `minecraft:the_end` stops the world from loading unless it is written `{ "id": "minecraft:the_end", "required": false }`, and even then the tag stays empty until the first `/reload`. On **1.21** dimension tags work from the first start.
 
 ## Mekanism chemicals
 

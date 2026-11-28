@@ -62,7 +62,7 @@ final class FtbTeamsListeners {
         if (player == null) {
             return;
         }
-        ChaptersAPI.syncAll(player);
+        ChaptersAPI.syncStages(player);
         InventoryAuditor.auditNow(player);
         DimensionHandler.auditNow(player);
     }
@@ -133,7 +133,7 @@ final class FtbTeamsListeners {
         }
 
         if (player != null) {
-            ChaptersAPI.syncAll(player);
+            ChaptersAPI.syncStages(player);
             InventoryAuditor.auditNow(player);
             DimensionHandler.auditNow(player);
         }
@@ -160,16 +160,17 @@ final class FtbTeamsListeners {
         boolean isParty = team != null && !team.isClientTeam() && team.isPartyTeam();
         if (team == null || team.isClientTeam()
                 || !StageAccounts.shouldMigrateLegacy(isParty, legacy.view().isEmpty())) {
-            ChaptersAPI.syncAll(player);
+            ChaptersAPI.syncStages(player);
             return;
         }
 
-        Set<Identifier> legacyIds = Set.copyOf(legacy.view());
-        int added = 0;
-        for (Identifier rl : legacyIds) {
-            if (FtbTeamsBridge.addStage(player, rl)) {
-                added++;
-            }
+        // One write for the whole set: each write fires PROPERTIES_CHANGED, which syncs and audits every member.
+        Set<String> teamStages = FtbTeamsBridge.readStageStrings(team);
+        int before = teamStages.size();
+        teamStages.addAll(toStrings(legacy.view()));
+        int added = teamStages.size() - before;
+        if (added > 0) {
+            FtbTeamsBridge.writeStageStrings(team, teamStages);
         }
         player.setData(ChaptersRegistries.PLAYER_STAGES.get(), PlayerStages.empty());
         if (added > 0) {
@@ -180,7 +181,7 @@ final class FtbTeamsListeners {
                     team.getShortName()
             );
         }
-        ChaptersAPI.syncAll(player);
+        ChaptersAPI.syncStages(player);
     }
 
     private static void propagateToTeamMembers(Team team) {
@@ -191,7 +192,7 @@ final class FtbTeamsListeners {
         for (UUID memberId : team.getMembers()) {
             ServerPlayer member = server.getPlayerList().getPlayer(memberId);
             if (member != null && belongsToTeam(member, team)) {
-                ChaptersAPI.syncAll(member);
+                ChaptersAPI.syncStages(member);
                 InventoryAuditor.auditNow(member);
                 DimensionHandler.auditNow(member);
             }

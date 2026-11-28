@@ -30,39 +30,33 @@ class ClientVisibilityTest {
     @BeforeEach
     void setUp() throws IOException {
         book = TutorialFixtures.loadTutorialBook();
-        view = new ClientStageView();
-        view.replaceIndices(
-                book.itemStagesIndexView(),
-                book.fluidStagesIndexView(),
-                book.chemicalStagesIndexView(),
-                book.recipeStagesIndexView()
-        );
+        view = TutorialFixtures.mirror(book);
     }
 
     @Test
     void withoutStagesEverythingLockedIsHidden() {
-        assertTrue(view.lockedItemIds(book.catalog()).contains(NETHERITE_INGOT));
-        assertTrue(view.lockedFluidIds().contains(WATER));
-        assertTrue(view.lockedRecipeIds().contains(DIAMOND_PICKAXE));
+        assertTrue(view.hidden(book.catalog()).items().contains(NETHERITE_INGOT));
+        assertTrue(view.hidden(null).fluids().contains(WATER));
+        assertTrue(view.hidden(null).recipes().contains(DIAMOND_PICKAXE));
     }
 
     @Test
     void addRevealsWithoutRestart() {
         view.addStage(INTRO_NETHER);
-        assertFalse(view.lockedItemIds(book.catalog()).contains(NETHERITE_INGOT));
+        assertFalse(view.hidden(book.catalog()).items().contains(NETHERITE_INGOT));
 
         view.addStage(RECIPE_PICKAXE);
-        assertFalse(view.lockedRecipeIds().contains(DIAMOND_PICKAXE));
+        assertFalse(view.hidden(null).recipes().contains(DIAMOND_PICKAXE));
 
         view.addStage(FLUIDES_BASE);
-        assertFalse(view.lockedFluidIds().contains(WATER));
+        assertFalse(view.hidden(null).fluids().contains(WATER));
     }
 
     @Test
     void removeRecaches() {
         view.setStages(Set.of(INTRO_NETHER, RECIPE_PICKAXE, FLUIDES_BASE));
         view.removeStage(INTRO_NETHER);
-        assertTrue(view.lockedItemIds(book.catalog()).contains(NETHERITE_INGOT));
+        assertTrue(view.hidden(book.catalog()).items().contains(NETHERITE_INGOT));
     }
 
     @Test
@@ -74,19 +68,13 @@ class ClientVisibilityTest {
                 stageA, StageDefinition.fromJson(stageA, itemsJson(NETHERITE_INGOT)),
                 stageB, StageDefinition.fromJson(stageB, itemsJson(NETHERITE_INGOT))
         ));
-        ClientStageView multiView = new ClientStageView();
-        multiView.replaceIndices(
-                multi.itemStagesIndexView(),
-                multi.fluidStagesIndexView(),
-                multi.chemicalStagesIndexView(),
-                multi.recipeStagesIndexView()
-        );
+        ClientStageView multiView = TutorialFixtures.mirror(multi);
         multiView.setStages(Set.of(stageA, stageB));
-        assertFalse(multiView.lockedItemIds(multi.catalog()).contains(NETHERITE_INGOT));
+        assertFalse(multiView.hidden(multi.catalog()).items().contains(NETHERITE_INGOT));
         multiView.removeStage(stageA);
-        assertFalse(multiView.lockedItemIds(multi.catalog()).contains(NETHERITE_INGOT));
+        assertFalse(multiView.hidden(multi.catalog()).items().contains(NETHERITE_INGOT));
         multiView.removeStage(stageB);
-        assertTrue(multiView.lockedItemIds(multi.catalog()).contains(NETHERITE_INGOT));
+        assertTrue(multiView.hidden(multi.catalog()).items().contains(NETHERITE_INGOT));
     }
 
     private static JsonObject itemsJson(Identifier item) {

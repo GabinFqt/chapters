@@ -6,13 +6,13 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.level.material.Fluid;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -27,28 +27,34 @@ public final class StageBook {
     private final Map<Identifier, StageDefinition> datapackDefinitions = new LinkedHashMap<>();
     private final Map<Identifier, StageDefinition> runtimeDefinitions = new LinkedHashMap<>();
 
-    private List<StageDefinition> mergedDefinitions = List.of();
+    /** Every index built from the merged definitions. Swapped whole, so lock checks never take a lock. */
+    private volatile Indices indices = Indices.EMPTY;
 
-    /** contentId → (stageId → flags) */
-    private Map<Identifier, Map<Identifier, RestrictionFlags>> itemEdges = Map.of();
-    private Map<Identifier, Map<Identifier, RestrictionFlags>> fluidEdges = Map.of();
-    private Map<Identifier, Map<Identifier, RestrictionFlags>> chemicalEdges = Map.of();
-    private Map<Identifier, Map<Identifier, RestrictionFlags>> recipeEdges = Map.of();
-    private Map<Identifier, Map<Identifier, RestrictionFlags>> dimensionEdges = Map.of();
-
-    private Map<Identifier, Set<Identifier>> itemStagesIndex = Map.of();
-    private Map<Identifier, Set<Identifier>> fluidStagesIndex = Map.of();
-    private Map<Identifier, Set<Identifier>> chemicalStagesIndex = Map.of();
-    private Map<Identifier, Set<Identifier>> recipeStagesIndex = Map.of();
-    private Map<Identifier, Set<Identifier>> dimensionStagesIndex = Map.of();
-
-    private Map<Identifier, Set<Identifier>> itemJeiStagesIndex = Map.of();
-    private Map<Identifier, Set<Identifier>> fluidJeiStagesIndex = Map.of();
-    private Map<Identifier, Set<Identifier>> chemicalJeiStagesIndex = Map.of();
-    private Map<Identifier, Set<Identifier>> recipeJeiStagesIndex = Map.of();
-
-    private Map<Identifier, Set<Identifier>> fluidTransferStagesIndex = Map.of();
-    private Map<Identifier, Set<Identifier>> chemicalTransferStagesIndex = Map.of();
+    /** Edge maps are contentId → (stageId → flags); the others are the plain and flag-filtered stage sets. */
+    private record Indices(
+            Map<Identifier, Map<Identifier, RestrictionFlags>> itemEdges,
+            Map<Identifier, Map<Identifier, RestrictionFlags>> fluidEdges,
+            Map<Identifier, Map<Identifier, RestrictionFlags>> chemicalEdges,
+            Map<Identifier, Map<Identifier, RestrictionFlags>> recipeEdges,
+            Map<Identifier, Map<Identifier, RestrictionFlags>> dimensionEdges,
+            Map<Identifier, Set<Identifier>> itemStages,
+            Map<Identifier, Set<Identifier>> fluidStages,
+            Map<Identifier, Set<Identifier>> chemicalStages,
+            Map<Identifier, Set<Identifier>> recipeStages,
+            Map<Identifier, Set<Identifier>> dimensionStages,
+            Map<Identifier, Set<Identifier>> itemJeiStages,
+            Map<Identifier, Set<Identifier>> fluidJeiStages,
+            Map<Identifier, Set<Identifier>> chemicalJeiStages,
+            Map<Identifier, Set<Identifier>> recipeJeiStages,
+            Map<Identifier, Set<Identifier>> fluidTransferStages,
+            Map<Identifier, Set<Identifier>> chemicalTransferStages
+    ) {
+        static final Indices EMPTY = new Indices(
+                Map.of(), Map.of(), Map.of(), Map.of(), Map.of(),
+                Map.of(), Map.of(), Map.of(), Map.of(), Map.of(),
+                Map.of(), Map.of(), Map.of(), Map.of(),
+                Map.of(), Map.of());
+    }
 
     public StageBook(ContentCatalog catalog) {
         this.catalog = Objects.requireNonNull(catalog, "catalog");
@@ -85,9 +91,8 @@ public final class StageBook {
     }
 
     private void rebuildLocked() {
-        Map<Identifier, StageDefinition> merged = new LinkedHashMap<>(datapackDefinitions);
-        merged.putAll(runtimeDefinitions);
-        mergedDefinitions = List.copyOf(merged.values());
+        Map<Identifier, StageDefinition> merged = allDefinitionsLocked();
+        ContentCatalog catalog = new MemoizedCatalog(this.catalog);
 
         Map<Identifier, Map<Identifier, RestrictionFlags>> itemMap = new HashMap<>();
         Map<Identifier, Map<Identifier, RestrictionFlags>> fluidMap = new HashMap<>();
@@ -95,7 +100,7 @@ public final class StageBook {
         Map<Identifier, Map<Identifier, RestrictionFlags>> recipeMap = new HashMap<>();
         Map<Identifier, Map<Identifier, RestrictionFlags>> dimensionMap = new HashMap<>();
 
-        for (StageDefinition def : mergedDefinitions) {
+        for (StageDefinition def : merged.values()) {
             Identifier stageId = def.id();
             // Tags / namespaces first (OR within the stage), then explicit ids replace for that stage.
             for (Map.Entry<TagKey<Item>, RestrictionFlags> e : def.tags().entrySet()) {
@@ -159,25 +164,28 @@ public final class StageBook {
             }
         }
 
-        itemEdges = freezeEdges(itemMap);
-        fluidEdges = freezeEdges(fluidMap);
-        chemicalEdges = freezeEdges(chemicalMap);
-        recipeEdges = freezeEdges(recipeMap);
-        dimensionEdges = freezeEdges(dimensionMap);
-
-        itemStagesIndex = stageIndexFrom(itemEdges);
-        fluidStagesIndex = stageIndexFrom(fluidEdges);
-        chemicalStagesIndex = stageIndexFrom(chemicalEdges);
-        recipeStagesIndex = stageIndexFrom(recipeEdges);
-        dimensionStagesIndex = stageIndexFrom(dimensionEdges);
-
-        itemJeiStagesIndex = flagIndexFrom(itemEdges, Restriction.JEI);
-        fluidJeiStagesIndex = flagIndexFrom(fluidEdges, Restriction.JEI);
-        chemicalJeiStagesIndex = flagIndexFrom(chemicalEdges, Restriction.JEI);
-        recipeJeiStagesIndex = flagIndexFrom(recipeEdges, Restriction.JEI);
-
-        fluidTransferStagesIndex = flagIndexFrom(fluidEdges, Restriction.TRANSFER);
-        chemicalTransferStagesIndex = flagIndexFrom(chemicalEdges, Restriction.TRANSFER);
+        var itemEdges = freezeEdges(itemMap);
+        var fluidEdges = freezeEdges(fluidMap);
+        var chemicalEdges = freezeEdges(chemicalMap);
+        var recipeEdges = freezeEdges(recipeMap);
+        var dimensionEdges = freezeEdges(dimensionMap);
+        indices = new Indices(
+                itemEdges,
+                fluidEdges,
+                chemicalEdges,
+                recipeEdges,
+                dimensionEdges,
+                stageIndexFrom(itemEdges),
+                stageIndexFrom(fluidEdges),
+                stageIndexFrom(chemicalEdges),
+                stageIndexFrom(recipeEdges),
+                stageIndexFrom(dimensionEdges),
+                flagIndexFrom(itemEdges, Restriction.JEI),
+                flagIndexFrom(fluidEdges, Restriction.JEI),
+                flagIndexFrom(chemicalEdges, Restriction.JEI),
+                flagIndexFrom(recipeEdges, Restriction.JEI),
+                flagIndexFrom(fluidEdges, Restriction.TRANSFER),
+                flagIndexFrom(chemicalEdges, Restriction.TRANSFER));
     }
 
     /** OR-merge flags for the same stage (tag / namespace expansions). */
@@ -202,51 +210,55 @@ public final class StageBook {
         map.computeIfAbsent(contentId, k -> new LinkedHashMap<>()).put(stageId, f);
     }
 
-    public synchronized Map<Identifier, Set<Identifier>> itemStagesIndexView() {
-        return itemStagesIndex;
+    public Map<Identifier, Set<Identifier>> itemStagesIndexView() {
+        return indices.itemStages();
     }
 
-    public synchronized Map<Identifier, Set<Identifier>> fluidStagesIndexView() {
-        return fluidStagesIndex;
+    public Map<Identifier, Set<Identifier>> fluidStagesIndexView() {
+        return indices.fluidStages();
     }
 
-    public synchronized Map<Identifier, Set<Identifier>> chemicalStagesIndexView() {
-        return chemicalStagesIndex;
+    public Map<Identifier, Set<Identifier>> chemicalStagesIndexView() {
+        return indices.chemicalStages();
     }
 
-    public synchronized Map<Identifier, Set<Identifier>> recipeStagesIndexView() {
-        return recipeStagesIndex;
+    public Map<Identifier, Set<Identifier>> recipeStagesIndexView() {
+        return indices.recipeStages();
     }
 
-    public synchronized Map<Identifier, Set<Identifier>> dimensionStagesIndexView() {
-        return dimensionStagesIndex;
+    public Map<Identifier, Set<Identifier>> dimensionStagesIndexView() {
+        return indices.dimensionStages();
     }
 
-    public synchronized Map<Identifier, Set<Identifier>> itemJeiStagesIndexView() {
-        return itemJeiStagesIndex;
+    public Map<Identifier, Set<Identifier>> itemJeiStagesIndexView() {
+        return indices.itemJeiStages();
     }
 
-    public synchronized Map<Identifier, Set<Identifier>> fluidJeiStagesIndexView() {
-        return fluidJeiStagesIndex;
+    public Map<Identifier, Set<Identifier>> fluidJeiStagesIndexView() {
+        return indices.fluidJeiStages();
     }
 
-    public synchronized Map<Identifier, Set<Identifier>> chemicalJeiStagesIndexView() {
-        return chemicalJeiStagesIndex;
+    public Map<Identifier, Set<Identifier>> chemicalJeiStagesIndexView() {
+        return indices.chemicalJeiStages();
     }
 
-    public synchronized Map<Identifier, Set<Identifier>> recipeJeiStagesIndexView() {
-        return recipeJeiStagesIndex;
+    public Map<Identifier, Set<Identifier>> recipeJeiStagesIndexView() {
+        return indices.recipeJeiStages();
     }
 
-    public synchronized Map<Identifier, Set<Identifier>> fluidTransferStagesIndexView() {
-        return fluidTransferStagesIndex;
+    public Map<Identifier, Set<Identifier>> fluidTransferStagesIndexView() {
+        return indices.fluidTransferStages();
     }
 
-    public synchronized Map<Identifier, Set<Identifier>> chemicalTransferStagesIndexView() {
-        return chemicalTransferStagesIndex;
+    public Map<Identifier, Set<Identifier>> chemicalTransferStagesIndexView() {
+        return indices.chemicalTransferStages();
     }
 
     public synchronized Map<Identifier, StageDefinition> allDefinitions() {
+        return allDefinitionsLocked();
+    }
+
+    private Map<Identifier, StageDefinition> allDefinitionsLocked() {
         Map<Identifier, StageDefinition> merged = new LinkedHashMap<>(datapackDefinitions);
         merged.putAll(runtimeDefinitions);
         return merged;
@@ -266,98 +278,101 @@ public final class StageBook {
         return ids;
     }
 
-    public synchronized boolean isItemLocked(Identifier itemId, Set<Identifier> ownedStages) {
+    public boolean isItemLocked(Identifier itemId, Set<Identifier> ownedStages) {
         if (itemId == null) {
             return false;
         }
-        return LockRules.isLocked(itemStagesIndex.get(itemId), ownedStages);
+        return LockRules.isLocked(indices.itemStages().get(itemId), ownedStages);
     }
 
-    public synchronized boolean isFluidLocked(Identifier fluidKindId, Set<Identifier> ownedStages) {
+    public boolean isFluidLocked(Identifier fluidKindId, Set<Identifier> ownedStages) {
         if (fluidKindId == null) {
             return false;
         }
-        return LockRules.isLocked(fluidStagesIndex.get(fluidKindId), ownedStages);
+        return LockRules.isLocked(indices.fluidStages().get(fluidKindId), ownedStages);
     }
 
-    public synchronized boolean isChemicalLocked(Identifier chemicalId, Set<Identifier> ownedStages) {
+    public boolean isChemicalLocked(Identifier chemicalId, Set<Identifier> ownedStages) {
         if (chemicalId == null) {
             return false;
         }
-        return LockRules.isLocked(chemicalStagesIndex.get(chemicalId), ownedStages);
+        return LockRules.isLocked(indices.chemicalStages().get(chemicalId), ownedStages);
     }
 
-    public synchronized boolean isRecipeLocked(Identifier recipeId, Set<Identifier> ownedStages) {
+    public boolean isRecipeLocked(Identifier recipeId, Set<Identifier> ownedStages) {
         if (recipeId == null) {
             return false;
         }
-        return LockRules.isLocked(recipeStagesIndex.get(recipeId), ownedStages);
+        return LockRules.isLocked(indices.recipeStages().get(recipeId), ownedStages);
     }
 
-    public synchronized boolean isDimensionLocked(Identifier dimensionId, Set<Identifier> ownedStages) {
+    public boolean isDimensionLocked(Identifier dimensionId, Set<Identifier> ownedStages) {
         if (dimensionId == null) {
             return false;
         }
-        return LockRules.isLocked(dimensionStagesIndex.get(dimensionId), ownedStages);
+        return LockRules.isLocked(indices.dimensionStages().get(dimensionId), ownedStages);
     }
 
-    public synchronized boolean isItemRestricted(
+    public boolean isItemRestricted(
             Identifier itemId, Set<Identifier> ownedStages, Restriction restriction) {
-        return isRestricted(itemEdges.get(itemId), ownedStages, restriction);
+        return isRestricted(indices.itemEdges().get(itemId), ownedStages, restriction);
     }
 
-    public synchronized boolean isFluidRestricted(
+    public boolean isFluidRestricted(
             Identifier fluidKindId, Set<Identifier> ownedStages, Restriction restriction) {
-        return isRestricted(fluidEdges.get(fluidKindId), ownedStages, restriction);
+        return isRestricted(indices.fluidEdges().get(fluidKindId), ownedStages, restriction);
     }
 
-    public synchronized boolean isChemicalRestricted(
+    public boolean isChemicalRestricted(
             Identifier chemicalId, Set<Identifier> ownedStages, Restriction restriction) {
-        return isRestricted(chemicalEdges.get(chemicalId), ownedStages, restriction);
+        return isRestricted(indices.chemicalEdges().get(chemicalId), ownedStages, restriction);
     }
 
-    public synchronized boolean isRecipeRestricted(
+    public boolean isRecipeRestricted(
             Identifier recipeId, Set<Identifier> ownedStages, Restriction restriction) {
-        return isRestricted(recipeEdges.get(recipeId), ownedStages, restriction);
+        return isRestricted(indices.recipeEdges().get(recipeId), ownedStages, restriction);
     }
 
-    public synchronized boolean isDimensionRestricted(
+    public boolean isDimensionRestricted(
             Identifier dimensionId, Set<Identifier> ownedStages, Restriction restriction) {
-        return isRestricted(dimensionEdges.get(dimensionId), ownedStages, restriction);
+        return isRestricted(indices.dimensionEdges().get(dimensionId), ownedStages, restriction);
     }
 
     /**
-     * Item lock including filled-bucket → fluid gating (same rule as LockResolver).
+     * Item restriction including the filled-bucket rule: a bucket counts as restricted while its fluid is.
+     *
+     * @param bucketFluidId fluid kind held by the item when it is a filled bucket, else {@code null}
      */
-    public synchronized boolean isItemOrFluidBucketLocked(Identifier itemId, Set<Identifier> ownedStages) {
-        if (isItemLocked(itemId, ownedStages)) {
-            return true;
-        }
-        for (Map.Entry<Identifier, Set<Identifier>> e : fluidStagesIndex.entrySet()) {
-            if (!LockRules.isLocked(e.getValue(), ownedStages)) {
-                continue;
-            }
-            if (catalog.bucketItemsForFluid(e.getKey()).contains(itemId)) {
+    public boolean isItemOrFluidBucketRestricted(
+            Identifier itemId,
+            @Nullable Identifier bucketFluidId,
+            Set<Identifier> ownedStages,
+            Restriction restriction) {
+        Indices current = indices;
+        return isRestricted(current.itemEdges().get(itemId), ownedStages, restriction)
+                || (bucketFluidId != null
+                        && isRestricted(current.fluidEdges().get(bucketFluidId), ownedStages, restriction));
+    }
+
+    /** True when no item and no fluid is gated, so inventory checks can stop early. */
+    public boolean hasNoItemOrFluidLocks() {
+        Indices current = indices;
+        return current.itemEdges().isEmpty() && current.fluidEdges().isEmpty();
+    }
+
+    /** Whether a stage locks a dimension through a tag or a namespace, which only the running server can resolve. */
+    public synchronized boolean usesDimensionExpansion() {
+        for (StageDefinition def : allDefinitionsLocked().values()) {
+            if (!def.dimensionTags().isEmpty() || !def.dimensionNamespaces().isEmpty()) {
                 return true;
             }
         }
         return false;
     }
 
-    public synchronized boolean isItemOrFluidBucketRestricted(
-            Identifier itemId, Set<Identifier> ownedStages, Restriction restriction) {
-        if (isItemRestricted(itemId, ownedStages, restriction)) {
-            return true;
-        }
-        for (Map.Entry<Identifier, Map<Identifier, RestrictionFlags>> e : fluidEdges.entrySet()) {
-            if (!isRestricted(e.getValue(), ownedStages, restriction)) {
-                continue;
-            }
-            if (catalog.bucketItemsForFluid(e.getKey()).contains(itemId)) {
-                return true;
-            }
-        }
-        return false;
+    /** Rebuilds every index from the current definitions, after the registries the catalog reads have changed. */
+    public synchronized void rebuild() {
+        rebuildLocked();
     }
 
     static boolean isRestricted(

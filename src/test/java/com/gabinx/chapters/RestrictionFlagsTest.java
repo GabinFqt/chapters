@@ -75,7 +75,7 @@ class RestrictionFlagsTest {
         book.replaceDatapack(Map.of(stage, StageDefinition.fromJson(stage, json)));
 
         assertTrue(book.isItemLocked(DIAMOND, Set.of()));
-        List<Integer> slots = InventoryPlan.slotsToDrop(List.of(DIAMOND), book, Set.of());
+        List<Integer> slots = InventoryPlan.slotsToDrop(List.of(DIAMOND), book, Set.of(), TutorialFixtures::bucketFluid);
         assertEquals(List.of(), slots);
     }
 
